@@ -3,6 +3,7 @@ const Hosteler = require("../models/Hostelers");
 const sendSMS = require("../utils/sendSMS");
 const dotenv = require("dotenv");
 const axios = require("axios");
+const { transliterateName } = require("../utils/transliterationUtils");
 dotenv.config();
 
 const HOLIDAY_TEMPLATE_ID = process.env.HOLIDAY_TEMPLATE_ID;
@@ -25,7 +26,7 @@ exports.createHolidayMsg = async (req, res) => {
 // Get all holiday messages
 exports.getHolidayMsgs = async (req, res) => {
   try {
-    const messages = await HolidayMsg.find().sort({createdAt:-1});
+    const messages = await HolidayMsg.find().sort({ createdAt: -1 });
     res.status(200).json({ success: true, messages });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -54,7 +55,7 @@ exports.deleteHolidayMsg = async (req, res) => {
 exports.sendHolidayMsgs = async (req, res) => {
   try {
     console.log("Processing holiday messages...");
-    const { college, year, occasion, fromDate, toDate, sendBy,message } = req.body;
+    const { college, year, occasion, fromDate, toDate, sendBy, message } = req.body;
 
     const allColleges = ["NEC", "NIT", "NIPS"];
 
@@ -83,10 +84,7 @@ exports.sendHolidayMsgs = async (req, res) => {
       const messageTemplate = HOLIDAY_MSG_TEMPLATE;
 
       // Translate the occasion to Telugu
-      const teluguNameResponse = await axios.get(
-        `https://api.mymemory.translated.net/get?q=${occasion}&langpair=en|te`
-      );
-      const occasionTel = teluguNameResponse.data.responseData.translatedText;
+      const occasionTel = await transliterateName(occasion);
 
       // Variables for the SMS
       const variables = [currentCollege, occasionTel, fromDate, toDate];
@@ -123,8 +121,8 @@ exports.sendHolidayMsgs = async (req, res) => {
         sendBy: sendBy,
         fromDate: fromDate,
         toDate: toDate,
-        msgCount:totalMessagesSent,
-        message:message
+        msgCount: totalMessagesSent,
+        message: message
       });
       await holidayMsg.save();
     } catch (err) {
