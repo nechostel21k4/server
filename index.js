@@ -13,6 +13,7 @@ const hostelerRoutes = require("./routes/hostelerRoutes");
 const hostlerCredentialsRoutes = require("./routes/hostlerCredentialsRoutes");
 const requestsRoutes = require("./routes/requestsRoutes");
 const holidayRoutes = require("./routes/holidayMsgRoutes");
+const complaintRoutes = require("./routes/complaintRoutes");
 
 const inchargeRoutes = require("./routes/inchargeRoutes");
 const InchargeLoginRoutes = require("./routes/inchargeLoginRoutes");
@@ -34,7 +35,7 @@ app.use(express.json());
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use("/uploads",express.static("uploads"));
+app.use("/uploads", express.static("uploads"));
 
 // Routes
 
@@ -47,6 +48,7 @@ app.use("/student", hostelerRoutes);
 app.use("/student-auth", hostlerCredentialsRoutes);
 app.use("/requests", requestsRoutes);
 app.use("/holiday", holidayRoutes);
+app.use("/complaint", complaintRoutes);
 
 
 // incharges
@@ -58,7 +60,7 @@ app.use("/logs", logsRoutes);
 app.use("/faculty", facultyRoutes);
 
 // college branch hostel schemas
-app.use("/schemas",schemasRoutes);
+app.use("/schemas", schemasRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
