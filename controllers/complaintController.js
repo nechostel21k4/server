@@ -43,7 +43,11 @@ exports.getComplaints = async (req, res) => {
         let query = {};
 
         if (college && college !== 'ALL') {
-            query.college = college;
+            if (college === 'BH1' || college === 'GH1') {
+                query.hostelId = college;
+            } else {
+                query.college = college;
+            }
         }
         if (status && status !== 'ALL') {
             query.status = status;
