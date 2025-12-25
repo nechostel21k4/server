@@ -123,12 +123,32 @@ exports.markAttendance = async (req, res) => {
             return res.status(400).json({ message: "Face not registered. Please register your face first." });
         }
 
-        const uploadedDescriptor = await FaceService.getFaceDescriptor(file.buffer);
-        if (!uploadedDescriptor) {
-            return res.status(400).json({ message: "No face detected in the image." });
+        let matchResult;
+        
+        // OPTIMIZATION: Check if client sent the descriptor directly
+        if (req.body.faceDescriptor) {
+             console.log("[Attendance] Using client-provided descriptor");
+             try {
+                const clientDescriptor = JSON.parse(req.body.faceDescriptor);
+                // Convert to Float32Array or array depending on what FaceService expects (isFaceMatch handles both usually, but let's be safe)
+                // FaceAPI descriptors are Float32Array. 
+                // clientDescriptor from JSON will be a regular array. FaceService.isFaceMatch uses faceapi.euclideanDistance which works with arrays.
+                
+                 matchResult = FaceService.isFaceMatch(studentCreds.faceDescriptor, clientDescriptor);
+             } catch (e) {
+                 console.error("[Attendance] Invalid client descriptor:", e);
+                 return res.status(400).json({ message: "Invalid face descriptor format." });
+             }
+        } else {
+             // Fallback: Compute on server (Slow)
+             console.log("[Attendance] improved server-side descriptor calculation");
+             const uploadedDescriptor = await FaceService.getFaceDescriptor(file.buffer);
+             if (!uploadedDescriptor) {
+                 return res.status(400).json({ message: "No face detected in the image." });
+             }
+             matchResult = FaceService.isFaceMatch(studentCreds.faceDescriptor, uploadedDescriptor);
         }
 
-        const matchResult = FaceService.isFaceMatch(studentCreds.faceDescriptor, uploadedDescriptor);
         console.log(`[Attendance] Match Result: ${JSON.stringify(matchResult)}`);
 
         if (!matchResult.isMatch) {
