@@ -20,7 +20,8 @@ const hostlerCredentialsSchema = new mongoose.Schema({
         //     message: props => `${props.value} is not a strong password`
         // }
     },
-    otp: { type: String }
+    otp: { type: String },
+    faceDescriptor: { type: [Number], default: [] } // Store 128-d vector
 }, { timestamps: true });
 
 module.exports = mongoose.model('HostlerCredentials', hostlerCredentialsSchema);

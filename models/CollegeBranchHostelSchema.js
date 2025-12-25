@@ -13,7 +13,13 @@ const branchSchema = new Schema({
 
 const hostelSchema = new Schema({
   code: { type: String, default: "" },
-  name: { type: String, default: "" }
+  name: { type: String, default: "" },
+  geoCoordinates: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+    radius: { type: Number, default: 200 } // in meters
+  },
+  allowedIPs: { type: [String], default: [] } // Array of allowed IP addresses or patterns
 });
 
 // Creating models

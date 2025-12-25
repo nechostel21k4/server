@@ -22,6 +22,7 @@ const logsRoutes = require("./routes/logsRoutes");
 const facultyRoutes = require("./routes/facultyRoutes");
 
 const schemasRoutes = require("./routes/CollegeBranchHostelRoutes");
+const attendanceRoutes = require("./routes/attendance");
 
 const { default: mongoose } = require("mongoose");
 
@@ -61,6 +62,7 @@ app.use("/faculty", facultyRoutes);
 
 // college branch hostel schemas
 app.use("/schemas", schemasRoutes);
+app.use("/attendance", attendanceRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

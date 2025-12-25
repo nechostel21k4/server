@@ -120,14 +120,25 @@ exports.getAllHostelers = async (req, res) => {
 };
 
 // Get a single hosteler by RollNo
+// Get a single hosteler by RollNo
 exports.getHostelerByRollNo = async (req, res) => {
   try {
-    const hosteler = await Hosteler.findOne({ rollNo: req.params.RollNo });
+    const rollNo = req.params.RollNo;
+    const hosteler = await Hosteler.findOne({ rollNo });
 
     if (!hosteler) {
       return res.json({ isExist: false, message: "Hosteler not found" });
     }
-    res.status(200).json({ isExist: true, hosteler });
+
+    // Check Face Registration Status
+    const creds = await HostlerCredentials.findOne({ rollNo });
+    const isRegistered = creds && creds.faceDescriptor && creds.faceDescriptor.length > 0;
+
+    // Append status to hosteler object (safely converting to object)
+    const hostelerObj = hosteler.toObject();
+    hostelerObj.isRegistered = !!isRegistered;
+
+    res.status(200).json({ isExist: true, hosteler: hostelerObj });
   } catch (error) {
     res.json({ message: error.message });
   }
@@ -388,19 +399,19 @@ exports.updateHostelerByRollNo = async (req, res) => {
 };
 
 exports.createRequestAndUpdateStudent = async (req, res) => {
-  try { 
+  try {
     const { student, lastRequest } = req.body;
     const newRequest = new Request(lastRequest);
     const res1 = await newRequest.save();
 
     const res2 = await Hosteler.findOneAndUpdate(
       { rollNo: req.params.RollNo },
-      {...student,lastRequest:res1},
+      { ...student, lastRequest: res1 },
       { new: true }
     );
-    res.status(201).json({ success: true,newData:res2 });
+    res.status(201).json({ success: true, newData: res2 });
   } catch (error) {
-    res.status(500).json({ success:false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

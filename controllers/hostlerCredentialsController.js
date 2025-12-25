@@ -102,7 +102,18 @@ exports.login = async (req, res) => {
         if (!isMatch) return res.json({ message: 'Invalid Roll Number or Password' });
 
         const token = jwt.sign({ id: hostler._id, rollNo: hostler.rollNo }, process.env.JWT_SECRET, { expiresIn: '30m' });
-        res.status(200).json({ success: true, token });
+
+        // Fetch student profile details
+        const studentProfile = await Hosteler.findOne({ rollNo });
+        const studentDetails = studentProfile ? {
+            name: studentProfile.name,
+            hostelId: studentProfile.hostelId,
+            branch: studentProfile.branch,
+            year: studentProfile.year,
+            isRegistered: hostler.faceDescriptor && hostler.faceDescriptor.length > 0 // Check registration
+        } : {};
+
+        res.status(200).json({ success: true, token, student: studentDetails });
     } catch (error) {
         res.json({ message: error.message });
     }
