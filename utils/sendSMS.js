@@ -34,11 +34,8 @@ const sendSMS = async (phoneNumber, templateId, messageTemplate, variables) => {
     // Make the API request
     const response = await axios.get(url);
 
-    // Log the full request URL for debugging
-    // console.log("SMS API Request URL:", url);
 
-    // Log the full response for debugging
-    // console.log("SMS API Response:", response.data);
+
 
     // Check for specific error messages in the response
     if (response.data.includes("error")) {
