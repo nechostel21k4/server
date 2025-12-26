@@ -41,7 +41,13 @@ exports.approveRequest = async (req, res) => {
     if (hosteler.lastRequest.id === request.id) {
       if (request.status === "ACCEPTED" && request.isActive) {
         const phoneNumber = hosteler.parentPhoneNo;
-        const gender = request.id.startsWith("BH") ? "అబ్బాయి" : "అమ్మాయి";
+        let gender = "అమ్మాయి";
+        if (hosteler.gender) {
+          const g = hosteler.gender.toLowerCase();
+          if (g === 'male' || g === 'm') gender = "అబ్బాయి";
+        } else if (request.id.startsWith("BH")) {
+          gender = "అబ్బాయి";
+        }
 
         // Translate hosteler name to Telugu
         const teluguName = await transliterateName(hosteler.name);
@@ -162,7 +168,13 @@ exports.arriveRequest = async (req, res) => {
 
     if (hosteler.lastRequest.id === request.id) {
       const phoneNumber = hosteler.parentPhoneNo;
-      const gender = request.id.startsWith("BH") ? "అబ్బాయి" : "అమ్మాయి";
+      let gender = "అమ్మాయి";
+      if (hosteler.gender) {
+        const g = hosteler.gender.toLowerCase();
+        if (g === 'male' || g === 'm') gender = "అబ్బాయి";
+      } else if (request.id.startsWith("BH")) {
+        gender = "అబ్బాయి";
+      }
 
       // Translate hosteler name to Telugu
       const teluguName = await transliterateName(hosteler.name);
@@ -246,7 +258,13 @@ exports.CancelRequestById = async (req, res) => {
     if (hosteler.lastRequest.id === request.id) {
       if (request.status === "CANCELLED02") {
         const phoneNumber = hosteler.parentPhoneNo;
-        const gender = request.id.startsWith("BH") ? "అబ్బాయి" : "అమ్మాయి";
+        let gender = "అమ్మాయి";
+        if (hosteler.gender) {
+          const g = hosteler.gender.toLowerCase();
+          if (g === 'male' || g === 'm') gender = "అబ్బాయి";
+        } else if (request.id.startsWith("BH")) {
+          gender = "అబ్బాయి";
+        }
 
         // Translate hosteler name to Telugu
         const teluguName = await transliterateName(request.name);
