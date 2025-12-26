@@ -124,29 +124,29 @@ exports.markAttendance = async (req, res) => {
         }
 
         let matchResult;
-        
+
         // OPTIMIZATION: Check if client sent the descriptor directly
         if (req.body.faceDescriptor) {
-             console.log("[Attendance] Using client-provided descriptor");
-             try {
+            console.log("[Attendance] Using client-provided descriptor");
+            try {
                 const clientDescriptor = JSON.parse(req.body.faceDescriptor);
                 // Convert to Float32Array or array depending on what FaceService expects (isFaceMatch handles both usually, but let's be safe)
                 // FaceAPI descriptors are Float32Array. 
                 // clientDescriptor from JSON will be a regular array. FaceService.isFaceMatch uses faceapi.euclideanDistance which works with arrays.
-                
-                 matchResult = FaceService.isFaceMatch(studentCreds.faceDescriptor, clientDescriptor);
-             } catch (e) {
-                 console.error("[Attendance] Invalid client descriptor:", e);
-                 return res.status(400).json({ message: "Invalid face descriptor format." });
-             }
+
+                matchResult = FaceService.isFaceMatch(studentCreds.faceDescriptor, clientDescriptor);
+            } catch (e) {
+                console.error("[Attendance] Invalid client descriptor:", e);
+                return res.status(400).json({ message: "Invalid face descriptor format." });
+            }
         } else {
-             // Fallback: Compute on server (Slow)
-             console.log("[Attendance] improved server-side descriptor calculation");
-             const uploadedDescriptor = await FaceService.getFaceDescriptor(file.buffer);
-             if (!uploadedDescriptor) {
-                 return res.status(400).json({ message: "No face detected in the image." });
-             }
-             matchResult = FaceService.isFaceMatch(studentCreds.faceDescriptor, uploadedDescriptor);
+            // Fallback: Compute on server (Slow)
+            console.log("[Attendance] improved server-side descriptor calculation");
+            const uploadedDescriptor = await FaceService.getFaceDescriptor(file.buffer);
+            if (!uploadedDescriptor) {
+                return res.status(400).json({ message: "No face detected in the image." });
+            }
+            matchResult = FaceService.isFaceMatch(studentCreds.faceDescriptor, uploadedDescriptor);
         }
 
         console.log(`[Attendance] Match Result: ${JSON.stringify(matchResult)}`);
@@ -196,9 +196,29 @@ exports.registerFace = async (req, res) => {
             return res.status(400).json({ message: "Image and RollNo required." });
         }
 
-        const descriptor = await FaceService.getFaceDescriptor(file.buffer);
-        if (!descriptor) {
-            return res.status(400).json({ message: "No face detected. Try again." });
+        let descriptor;
+
+        // OPTIMIZATION: Check if client sent the descriptor
+        if (req.body.faceDescriptor) {
+            console.log("[Register] Using client-provided descriptor");
+            try {
+                // Parse if stringified
+                const parsed = typeof req.body.faceDescriptor === 'string'
+                    ? JSON.parse(req.body.faceDescriptor)
+                    : req.body.faceDescriptor;
+
+                descriptor = new Float32Array(parsed); // Ensure Float32Array
+            } catch (e) {
+                console.error("[Register] Invalid client descriptor:", e);
+                return res.status(400).json({ message: "Invalid face descriptor format." });
+            }
+        } else {
+            // Fallback: Compute on server (Slow)
+            console.log("[Register] Performing server-side detection...");
+            descriptor = await FaceService.getFaceDescriptor(file.buffer);
+            if (!descriptor) {
+                return res.status(400).json({ message: "No face detected. Try again." });
+            }
         }
 
         // Convert Float32Array to regular array for Mongo
