@@ -4,6 +4,7 @@ const axios = require("axios");
 const sendSMS = require("../utils/sendSMS");
 const formatDate = require("../utils/formatDate");
 const { ImageModel } = require("../models/ProfileImage");
+const { transliterateName } = require("../utils/transliterationUtils");
 
 const dotenv = require("dotenv");
 dotenv.config();
@@ -43,10 +44,7 @@ exports.approveRequest = async (req, res) => {
         const gender = request.id.startsWith("BH") ? "అబ్బాయి" : "అమ్మాయి";
 
         // Translate hosteler name to Telugu
-        const teluguNameResponse = await axios.get(
-          `https://api.mymemory.translated.net/get?q=${hosteler.name}&langpair=en|te`
-        );
-        const teluguName = teluguNameResponse.data.responseData.translatedText;
+        const teluguName = await transliterateName(hosteler.name);
 
         let variables;
 
@@ -167,10 +165,7 @@ exports.arriveRequest = async (req, res) => {
       const gender = request.id.startsWith("BH") ? "అబ్బాయి" : "అమ్మాయి";
 
       // Translate hosteler name to Telugu
-      const teluguNameResponse = await axios.get(
-        `https://api.mymemory.translated.net/get?q=${hosteler.name}&langpair=en|te`
-      );
-      const teluguName = teluguNameResponse.data.responseData.translatedText;
+      const teluguName = await transliterateName(hosteler.name);
 
       const variables = [
         gender + " " + teluguName,
@@ -254,10 +249,7 @@ exports.CancelRequestById = async (req, res) => {
         const gender = request.id.startsWith("BH") ? "అబ్బాయి" : "అమ్మాయి";
 
         // Translate hosteler name to Telugu
-        const teluguNameResponse = await axios.get(
-          `https://api.mymemory.translated.net/get?q=${request.name}&langpair=en|te`
-        );
-        const teluguName = teluguNameResponse.data.responseData.translatedText;
+        const teluguName = await transliterateName(request.name);
 
         let variables = [];
         if (request.type === "PERMISSION") {
