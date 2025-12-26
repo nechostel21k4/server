@@ -65,11 +65,6 @@ exports.updateHostelerAndCredentials = async (req, res) => {
             { new: true, upsert: true } // `upsert` will create the document if it doesn't exist
         );
 
-        await ImageModel.findOneAndUpdate(
-            { rollNo },
-            { path, filename },
-            { new: true, upsert: true }
-        );
 
         res.status(200).json({
             success: true,
