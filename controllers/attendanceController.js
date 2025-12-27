@@ -93,17 +93,38 @@ exports.markAttendance = async (req, res) => {
             console.log("Warning: No IP restrictions configured. Allowing all IPs.");
         }
 
-        // Optional: Keep geo-location check if coordinates are configured
+        // 3. Geofence Check (Non-blocking: Marks as Absent if outside)
+        let isWithinGeofence = false;
+        let distance = 0;
+        let attendanceStatus = 'Present'; // Default
+        let attendanceRemarks = "Within geofence";
+
         if (targetHostel.geoCoordinates && targetHostel.geoCoordinates.latitude) {
-            const dist = getDistanceFromLatLonInM(
+            distance = getDistanceFromLatLonInM(
                 latitude, longitude,
                 targetHostel.geoCoordinates.latitude, targetHostel.geoCoordinates.longitude
             );
-            console.log(`[Attendance] Distance: ${dist}m (Max: ${targetHostel.geoCoordinates.radius}m)`);
 
-            if (dist > targetHostel.geoCoordinates.radius) {
-                return res.status(403).json({ message: `Location mismatch. You are ${Math.round(dist)}m away from hostel.` });
+            // Round to 2 decimal places
+            distance = Math.round(distance * 100) / 100;
+            const maxRadius = targetHostel.geoCoordinates.radius || 200;
+
+            console.log(`[Attendance] Distance: ${distance}m (Max: ${maxRadius}m)`);
+
+            if (distance <= maxRadius) {
+                isWithinGeofence = true;
+                attendanceStatus = 'Present';
+                attendanceRemarks = "Within geofence";
+            } else {
+                isWithinGeofence = false;
+                attendanceStatus = 'Absent';
+                attendanceRemarks = `Outside geofence (${distance}m > ${maxRadius}m)`;
+                console.log(`[Attendance] Location Mis-match: Marking as ABSENT.`);
             }
+        } else {
+            // Fallback if no geofence set
+            isWithinGeofence = true;
+            attendanceRemarks = "No geofence configured";
         }
 
         // 3. Verify Face
@@ -170,8 +191,18 @@ exports.markAttendance = async (req, res) => {
             time: new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false }),
             location: { latitude, longitude },
             ipAddress: ipAddress,
+
+            // Face Data
             matchScore: matchResult.distance,
-            status: 'Present'
+            faceVerified: true,
+            faceConfidence: matchResult.distance, // Using distance as confidence proxy (lower is better usually, but storing raw value)
+
+            // Geofence Data
+            isWithinGeofence,
+            distance,
+            remarks: attendanceRemarks,
+
+            status: attendanceStatus
         });
 
         await newAttendance.save();

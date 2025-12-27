@@ -144,3 +144,62 @@ exports.updateHostelIPs = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Hostel CRUD
+
+exports.getAllHostels = async (req, res) => {
+  try {
+    const hostels = await Hostel.find(); // Fetch all hostels from the database
+    res.status(200).json({ success: true, hostels });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.AddandGetHostels = async (req, res) => {
+  try {
+    const newHostel = new Hostel();
+    await newHostel.save();
+    const hostels = await Hostel.find(); // Fetch all hostels from the database
+    res.status(200).json({ success: true, hostels });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateHostelById = async (req, res) => {
+  try {
+    const { id } = req.params; // Get _id from request parameters
+    const updateData = req.body; // Get update data from request body
+
+    const updatedHostel = await Hostel.findByIdAndUpdate(id, updateData, {
+      new: true, // Return the updated document
+      runValidators: true, // Ensure validation rules are applied
+    });
+
+    if (!updatedHostel) {
+      return res.status(200).json({ success: false, message: "Hostel not found." });
+    }
+
+    res.status(200).json({ success: true, message: "Hostel updated successfully.", hostel: updatedHostel });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+exports.deleteHostelById = async (req, res) => {
+  try {
+    const { id } = req.params; // Extract _id from request parameters
+
+    const deletedHostel = await Hostel.findByIdAndDelete(id); // Delete by _id
+
+    if (!deletedHostel) {
+      return res.status(200).json({ success: false, message: "Hostel not found." });
+    }
+
+    res.status(200).json({ success: true, message: "Hostel deleted successfully." });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

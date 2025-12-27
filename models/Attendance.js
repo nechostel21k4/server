@@ -11,9 +11,19 @@ const attendanceSchema = new mongoose.Schema({
     },
     ipAddress: { type: String }, // IP Address of the device
     matchScore: { type: Number }, // Face API match confidence
+
+    // New Fields for Face + Geofence Flow
+    faceImagePath: String,
+    faceVerified: { type: Boolean, default: false },
+    faceConfidence: Number,
+    isWithinGeofence: Boolean,
+    distance: Number, // Distance from center in meters
+    remarks: String, // Reason for status
+    deviceInfo: String,
+
     status: {
         type: String,
-        enum: ['Present', 'Absent', 'Leave', 'Permission'],
+        enum: ['Present', 'Absent', 'Late', 'Leave', 'Permission'], // Added 'Late'
         default: 'Present'
     }
 }, { timestamps: true });

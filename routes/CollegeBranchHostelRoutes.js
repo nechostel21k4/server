@@ -17,6 +17,12 @@ router.get("/addGetBranches", authenticateUser, schemaController.AddandGetBranch
 router.post("/updateBranchById/:id", authenticateUser, schemaController.updateBranchById)
 router.delete("/deleteBranchById/:id", authenticateUser, schemaController.deleteBranchById)
 
+router.get("/getHostels", authenticateUser, schemaController.getAllHostels)
+router.get("/addGetHostels", authenticateUser, schemaController.AddandGetHostels)
+
+router.post("/updateHostelById/:id", authenticateUser, schemaController.updateHostelById)
+router.delete("/deleteHostelById/:id", authenticateUser, schemaController.deleteHostelById)
+
 // Hostel IP Configuration
 router.post("/updateHostelIPs", authenticateUser, schemaController.updateHostelIPs)
 
