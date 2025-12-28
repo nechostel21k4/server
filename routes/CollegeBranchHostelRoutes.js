@@ -25,5 +25,7 @@ router.delete("/deleteHostelById/:id", authenticateUser, schemaController.delete
 
 // Hostel IP Configuration
 router.post("/updateHostelIPs", authenticateUser, schemaController.updateHostelIPs)
+// Hostel Settings Configuration (Time)
+router.post("/updateHostelSettings", authenticateUser, schemaController.updateHostelSettings)
 
 module.exports = router;

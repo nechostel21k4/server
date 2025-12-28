@@ -9,7 +9,7 @@ const attendanceSchema = new mongoose.Schema({
         latitude: Number,
         longitude: Number
     },
-    ipAddress: { type: String }, // IP Address of the device
+
     matchScore: { type: Number }, // Face API match confidence
 
     // New Fields for Face + Geofence Flow

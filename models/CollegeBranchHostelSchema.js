@@ -19,7 +19,9 @@ const hostelSchema = new Schema({
     longitude: { type: Number },
     radius: { type: Number, default: 200 } // in meters
   },
-  allowedIPs: { type: [String], default: [] } // Array of allowed IP addresses or patterns
+  allowedIPs: { type: [String], default: [] }, // Array of allowed IP addresses or patterns
+  attendanceStartTime: { type: String, default: "00:00" }, // Format HH:mm
+  attendanceEndTime: { type: String, default: "23:59" }   // Format HH:mm
 });
 
 // Creating models

@@ -50,15 +50,7 @@ exports.markAttendance = async (req, res) => {
             return res.status(400).json({ message: "Attendance already marked for today." });
         }
 
-        // 2. Validate IP Address (Network-Based Attendance)
-        // Extract client IP
-        const clientIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-            req.headers['x-real-ip'] ||
-            req.connection.remoteAddress ||
-            req.socket.remoteAddress ||
-            'Unknown';
-
-        console.log(`[Attendance] Client IP: ${clientIP}`);
+        // 2. Validate IP Address (Network-Based Attendance) - REMOVED per user request
 
         // Fetch hostel configuration
         const hostel = await Hostel.findOne({ code: hostelId });
@@ -69,28 +61,24 @@ exports.markAttendance = async (req, res) => {
             return res.status(404).json({ message: "Hostel configuration not found." });
         }
 
-        // Check if IP validation is configured
-        if (targetHostel.allowedIPs && targetHostel.allowedIPs.length > 0) {
-            const isIPAllowed = targetHostel.allowedIPs.some(allowedIP => {
-                // Support wildcard patterns like 10.253.149.*
-                if (allowedIP.includes('*')) {
-                    const pattern = allowedIP.replace(/\./g, '\\.').replace(/\*/g, '.*');
-                    const regex = new RegExp(`^${pattern}$`);
-                    return regex.test(clientIP);
-                }
-                // Exact match
-                return allowedIP === clientIP;
-            });
+        // 2.5 Time Restriction Check
+        if (targetHostel.attendanceStartTime && targetHostel.attendanceEndTime) {
+            const nowIST = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+            const currentDate = new Date(nowIST);
 
-            if (!isIPAllowed) {
-                console.log(`[Attendance] IP Blocked: ${clientIP} not in allowed list`);
+            const [startH, startM] = targetHostel.attendanceStartTime.split(':');
+            const startTime = new Date(currentDate);
+            startTime.setHours(parseInt(startH), parseInt(startM), 0, 0);
+
+            const [endH, endM] = targetHostel.attendanceEndTime.split(':');
+            const endTime = new Date(currentDate);
+            endTime.setHours(parseInt(endH), parseInt(endM), 0, 0);
+
+            if (currentDate < startTime || currentDate > endTime) {
                 return res.status(403).json({
-                    message: `Network access denied. Your IP (${clientIP}) is not authorized. Please connect to the hostel WiFi.`
+                    message: `Attendance Closed. Time: ${targetHostel.attendanceStartTime} - ${targetHostel.attendanceEndTime}`
                 });
             }
-            console.log(`[Attendance] IP Validated: ${clientIP} is allowed`);
-        } else {
-            console.log("Warning: No IP restrictions configured. Allowing all IPs.");
         }
 
         // 3. Geofence Check (Non-blocking: Marks as Absent if outside)
@@ -177,12 +165,7 @@ exports.markAttendance = async (req, res) => {
         }
 
         // 4. Save Attendance
-        // Extract IP Address
-        const ipAddress = req.headers['x-forwarded-for'] ||
-            req.headers['x-real-ip'] ||
-            req.connection.remoteAddress ||
-            req.socket.remoteAddress ||
-            'Unknown';
+
 
         const newAttendance = new Attendance({
             studentId,
@@ -190,7 +173,7 @@ exports.markAttendance = async (req, res) => {
             date: today,
             time: new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false }),
             location: { latitude, longitude },
-            ipAddress: ipAddress,
+
 
             // Face Data
             matchScore: matchResult.distance,

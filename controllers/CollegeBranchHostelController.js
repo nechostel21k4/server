@@ -145,6 +145,38 @@ exports.updateHostelIPs = async (req, res) => {
   }
 };
 
+// Update Hostel Settings (Time)
+exports.updateHostelSettings = async (req, res) => {
+  try {
+    const { hostelCode, attendanceStartTime, attendanceEndTime } = req.body;
+
+    if (!hostelCode) {
+      return res.status(400).json({ message: 'Hostel code is required.' });
+    }
+
+    const updateFields = {};
+    if (attendanceStartTime) updateFields.attendanceStartTime = attendanceStartTime;
+    if (attendanceEndTime) updateFields.attendanceEndTime = attendanceEndTime;
+
+    const updatedHostel = await Hostel.findOneAndUpdate(
+      { code: hostelCode },
+      { $set: updateFields },
+      { new: true }
+    );
+
+    if (!updatedHostel) {
+      return res.status(404).json({ message: 'Hostel not found' });
+    }
+
+    res.status(200).json({
+      message: 'Hostel settings updated successfully',
+      hostel: updatedHostel
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Hostel CRUD
 
 exports.getAllHostels = async (req, res) => {
