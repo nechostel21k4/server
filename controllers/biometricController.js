@@ -87,6 +87,7 @@ exports.verifyRegistration = async (req, res) => {
             user.biometricCredentials = user.biometricCredentials || [];
             user.biometricCredentials.push(newCredential);
             await user.save();
+            console.log(`Biometric credential saved for user ${rollNo}. Total credentials: ${user.biometricCredentials.length}`);
 
             delete store[rollNo]; // Cleanup challenge
             res.json({ verified: true });
