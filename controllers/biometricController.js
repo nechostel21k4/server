@@ -87,7 +87,15 @@ exports.verifyRegistration = async (req, res) => {
             user.biometricCredentials = user.biometricCredentials || [];
             user.biometricCredentials.push(newCredential);
             await user.save();
-            console.log(`Biometric credential saved for user ${rollNo}. Total credentials: ${user.biometricCredentials.length}`);
+            console.log(`[BioReg] SUCCESS: Credential saved for ${rollNo}. In-memory count: ${user.biometricCredentials.length}`);
+
+            // IMMEDIATE RE-FETCH CHECK TO DEBUG PERSISTENCE
+            const userCheck = await HostlerCredentials.findOne({ rollNo });
+            console.log(`[BioReg] DB Re-fetch: ${userCheck.biometricCredentials?.length} credentials found.`);
+
+            if (!userCheck.biometricCredentials || userCheck.biometricCredentials.length === 0) {
+                console.error("[BioReg] CRITICAL: Data was NOT saved to DB. Check Schema deployment!");
+            }
 
             delete store[rollNo]; // Cleanup challenge
             res.json({ verified: true });
