@@ -4,8 +4,8 @@ const Hostelers = require('../models/Hostelers'); // Assuming you might need to 
 
 // Relying Party (RP) Configuration
 const rpName = 'Hostel Management App';
-const rpID = 'localhost'; // Update this to your production domain
-const origin = `http://${rpID}:5173`; // Update port if different
+const rpID = process.env.RP_ID || 'localhost';
+const origin = process.env.CLIENT_URL || `http://${rpID}:5173`;
 
 const store = {}; // Temporary in-memory store for challenges. In production, use Redis/DB.
 
