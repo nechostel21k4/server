@@ -3,9 +3,13 @@ const HostlerCredentials = require('../models/HostlerCredentials');
 const Hostelers = require('../models/Hostelers'); // Assuming you might need to check if user exists
 
 // Relying Party (RP) Configuration
+console.log("Biometric Controller Loading...");
+console.log("Environment RP_ID:", process.env.RP_ID);
+console.log("Environment CLIENT_URL:", process.env.CLIENT_URL);
+
 const rpName = 'Hostel Management App';
-const rpID = process.env.RP_ID || 'localhost';
-const origin = process.env.CLIENT_URL || `http://${rpID}:5173`;
+const rpID = process.env.RP_ID;
+const origin = process.env.CLIENT_URL;
 
 const store = {}; // Temporary in-memory store for challenges. In production, use Redis/DB.
 
