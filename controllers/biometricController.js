@@ -144,17 +144,24 @@ exports.verifyAuthentication = async (req, res) => {
             return res.status(400).json({ error: 'Invalid request' });
         }
 
+        // Helper to normalize Base64URL (remove padding) for comparison
+        const normalizeId = (id) => id ? id.replace(/=/g, '') : '';
+
         // DEBUG LOGGING
         console.log(`[VerifyAuth] Received Cred ID: ${response.id}`);
         console.log(`[VerifyAuth] Stored Cred IDs: ${user.biometricCredentials.map(c => c.credentialID).join(', ')}`);
 
+        // Find authenticator with normalized comparison
         const authenticator = user.biometricCredentials.find(
-            cre => cre.credentialID === response.id
+            cre => normalizeId(cre.credentialID) === normalizeId(response.id)
         );
 
         if (!authenticator) {
-            console.error('[VerifyAuth] No matching authenticator found');
-            return res.status(400).json({ message: 'Authenticator not registered' });
+            console.error('[VerifyAuth] No matching authenticator found (checked normalized IDs)');
+            return res.status(400).json({
+                message: 'Authenticator not registered',
+                debug: { received: response.id, stored: user.biometricCredentials.map(c => c.credentialID) }
+            });
         }
 
         const verification = await SimpleWebAuthnServer.verifyAuthenticationResponse({
