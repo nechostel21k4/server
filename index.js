@@ -63,6 +63,7 @@ app.use("/faculty", facultyRoutes);
 // college branch hostel schemas
 app.use("/schemas", schemasRoutes);
 app.use("/attendance", attendanceRoutes);
+app.use("/biometric", require("./routes/biometricRoutes"));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

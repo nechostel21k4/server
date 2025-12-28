@@ -21,7 +21,13 @@ const hostlerCredentialsSchema = new mongoose.Schema({
         // }
     },
     otp: { type: String },
-    faceDescriptor: { type: [Number], default: [] } // Store 128-d vector
+    faceDescriptor: { type: [Number], default: [] }, // Store 128-d vector
+    biometricCredentials: [{
+        credentialID: String,
+        credentialPublicKey: Buffer,
+        counter: Number,
+        transports: [String]
+    }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('HostlerCredentials', hostlerCredentialsSchema);
