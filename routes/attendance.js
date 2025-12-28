@@ -8,7 +8,6 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 router.post('/mark', upload.single('image'), attendanceController.markAttendance);
-router.post('/mark-biometric', attendanceController.markBiometricAttendance);
 router.post('/register-face', upload.single('image'), attendanceController.registerFace);
 router.get('/history/:studentId', attendanceController.getAttendanceHistory);
 router.get('/daily', attendanceController.getDailyAttendance);

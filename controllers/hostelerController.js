@@ -132,8 +132,7 @@ exports.getHostelerByRollNo = async (req, res) => {
 
     // Check Face Registration Status
     const creds = await HostlerCredentials.findOne({ rollNo });
-    const isRegistered = (creds && creds.faceDescriptor && creds.faceDescriptor.length > 0) ||
-      (creds && creds.biometricCredentials && creds.biometricCredentials.length > 0);
+    const isRegistered = creds && creds.faceDescriptor && creds.faceDescriptor.length > 0;
 
     // Append status to hosteler object (safely converting to object)
     const hostelerObj = hosteler.toObject();
