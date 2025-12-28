@@ -115,19 +115,21 @@ exports.generateAuthenticationOptions = async (req, res) => {
         const options = await SimpleWebAuthnServer.generateAuthenticationOptions({
             rpID,
             userVerification: 'required', // Require biometric
-            allowCredentials: userAuthenticators.map(auth => ({
-                id: auth.credentialID,
-                type: 'public-key',
-                transports: auth.transports,
-            })),
+            allowCredentials: userAuthenticators
+                .filter(auth => auth.credentialID)
+                .map(auth => ({
+                    id: auth.credentialID,
+                    type: 'public-key',
+                    transports: auth.transports,
+                })),
         });
 
         store[rollNo] = { challenge: options.challenge };
 
         res.json(options);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        console.error('Generate Auth Options Error:', error);
+        res.status(500).json({ message: error.message, stack: error.stack });
     }
 };
 
@@ -142,12 +144,17 @@ exports.verifyAuthentication = async (req, res) => {
             return res.status(400).json({ error: 'Invalid request' });
         }
 
+        // DEBUG LOGGING
+        console.log(`[VerifyAuth] Received Cred ID: ${response.id}`);
+        console.log(`[VerifyAuth] Stored Cred IDs: ${user.biometricCredentials.map(c => c.credentialID).join(', ')}`);
+
         const authenticator = user.biometricCredentials.find(
             cre => cre.credentialID === response.id
         );
 
         if (!authenticator) {
-            return res.status(400).json({ error: 'Authenticator not registered' });
+            console.error('[VerifyAuth] No matching authenticator found');
+            return res.status(400).json({ message: 'Authenticator not registered' });
         }
 
         const verification = await SimpleWebAuthnServer.verifyAuthenticationResponse({
@@ -173,10 +180,11 @@ exports.verifyAuthentication = async (req, res) => {
             delete store[rollNo];
             res.json({ verified: true });
         } else {
-            res.status(400).json({ verified: false });
+            console.error('[VerifyAuth] Verification returned false');
+            res.status(400).json({ verified: false, message: "Verification failed" });
         }
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message });
+        console.error('Verify Auth Error:', error);
+        res.status(500).json({ message: error.message, stack: error.stack });
     }
 };
