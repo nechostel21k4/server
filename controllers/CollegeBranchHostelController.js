@@ -158,6 +158,12 @@ exports.updateHostelSettings = async (req, res) => {
     if (attendanceStartTime) updateFields.attendanceStartTime = attendanceStartTime;
     if (attendanceEndTime) updateFields.attendanceEndTime = attendanceEndTime;
 
+    // Geo-Coordinates Update
+    const { latitude, longitude, radius } = req.body;
+    if (latitude !== undefined) updateFields['geoCoordinates.latitude'] = Number(latitude);
+    if (longitude !== undefined) updateFields['geoCoordinates.longitude'] = Number(longitude);
+    if (radius !== undefined) updateFields['geoCoordinates.radius'] = Number(radius);
+
     const updatedHostel = await Hostel.findOneAndUpdate(
       { code: hostelCode },
       { $set: updateFields },
