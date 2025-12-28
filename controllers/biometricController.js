@@ -32,11 +32,13 @@ exports.generateRegistrationOptions = async (req, res) => {
             userID: new Uint8Array(Buffer.from(user._id.toString())), // Convert to Uint8Array
             userName: user.rollNo,
             attestationType: 'none', // 'none' is recommended for privacy
-            excludeCredentials: userAuthenticators.map(auth => ({
-                id: auth.credentialID,
-                type: 'public-key',
-                transports: auth.transports,
-            })),
+            excludeCredentials: userAuthenticators
+                .filter(auth => auth.credentialID)
+                .map(auth => ({
+                    id: auth.credentialID,
+                    type: 'public-key',
+                    transports: auth.transports,
+                })),
             authenticatorSelection: {
                 residentKey: 'preferred',
                 userVerification: 'required', // Prefer biometric verification
