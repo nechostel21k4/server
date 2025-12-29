@@ -175,12 +175,14 @@ exports.getFilteredHostlers = async (req, res) => {
     // Fetch images for those usernames
     const images = await ImageModel.find({
       username: { $in: usernames },
-    }).select("username filename");
+    }).select("username filename path");
 
     // Construct image response
     const imageData = images.map((img) => ({
       username: img.username,
-      imagePath: `${process.env.IP}/uploads/${img.filename}`,
+      imagePath: img.path && img.path.startsWith('http')
+        ? img.path
+        : `${process.env.IP}/uploads/${img.filename}`,
     }));
 
     res.status(200).json({
@@ -565,12 +567,14 @@ exports.getHostelersByRoomNo = async (req, res) => {
     // Fetch images for those usernames
     const images = await ImageModel.find({
       username: { $in: usernames },
-    }).select("username filename");
+    }).select("username filename path");
 
     // Construct image response
     const imageData = images.map((img) => ({
       username: img.username,
-      imagePath: `${process.env.IP}/uploads/${img.filename}`,
+      imagePath: img.path && img.path.startsWith('http')
+        ? img.path
+        : `${process.env.IP}/uploads/${img.filename}`,
     }));
 
     res.status(200).json({
@@ -603,12 +607,14 @@ exports.getMyRoomies = async (req, res) => {
     // Fetch images for those usernames
     const images = await ImageModel.find({
       username: { $in: usernames },
-    }).select("username filename");
+    }).select("username filename path");
 
     // Construct image response
     const imageData = images.map((img) => ({
       username: img.username,
-      imagePath: `${process.env.IP}/uploads/${img.filename}`,
+      imagePath: img.path && img.path.startsWith('http')
+        ? img.path
+        : `${process.env.IP}/uploads/${img.filename}`,
     }));
 
     res.status(200).json({
