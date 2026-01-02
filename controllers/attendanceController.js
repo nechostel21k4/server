@@ -2,6 +2,7 @@ const Attendance = require('../models/Attendance');
 const Hosteler = require('../models/Hostelers');
 const HostlerCredentials = require('../models/HostlerCredentials');
 const { Hostel } = require('../models/CollegeBranchHostelSchema'); // Import Hostel model
+const Request = require('../models/Requests');
 const FaceService = require('../utils/FaceService');
 
 // Helper to calculate distance between two coords (Haversine formula)
@@ -325,6 +326,47 @@ exports.getRegistrationStatus = async (req, res) => {
         }));
 
         res.status(200).json(statusList);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+exports.getDailyLeaves = async (req, res) => {
+    try {
+        const { date, hostelId } = req.query; // YYYY-MM-DD
+        if (!date) return res.status(400).json({ message: "Date is required" });
+
+        // Construct start and end of the target day
+        // Assuming date is in local time representation "YYYY-MM-DD"
+        // We create a range that covers that whole day.
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const query = {
+            status: 'ACCEPTED',
+            isActive: true,
+            $or: [
+                {
+                    type: 'LEAVE',
+                    fromDate: { $lte: endOfDay }
+                },
+                {
+                    type: 'PERMISSION',
+                    date: { $lte: endOfDay }
+                }
+            ]
+        };
+
+        if (hostelId && hostelId !== 'BOTH') {
+            query.hostelId = hostelId;
+        }
+
+        const leaves = await Request.find(query);
+        res.status(200).json(leaves);
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
