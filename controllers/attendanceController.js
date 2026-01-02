@@ -347,15 +347,16 @@ exports.getDailyLeaves = async (req, res) => {
 
         const query = {
             status: 'ACCEPTED',
-            isActive: true,
+            // isActive: true, // REMOVED: Breaks historical view. relied on date overlap instead.
             $or: [
                 {
                     type: 'LEAVE',
-                    fromDate: { $lte: endOfDay }
+                    fromDate: { $lte: endOfDay },
+                    toDate: { $gte: startOfDay }
                 },
                 {
                     type: 'PERMISSION',
-                    date: { $lte: endOfDay }
+                    date: { $gte: startOfDay, $lte: endOfDay }
                 }
             ]
         };
