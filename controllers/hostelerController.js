@@ -669,9 +669,9 @@ exports.getHostelersByRoomNo = async (req, res) => {
 exports.getMyRoomies = async (req, res) => {
   try {
     const { hostelId, roomNo } = req.body;
-    const hostlers = await Hosteler.find(
+    let hostlers = await Hosteler.find(
       { roomNo, hostelId },
-      { rollNo: 1, name: 1, college: 1, year: 1, branch: 1, currentStatus: 1 }
+      { rollNo: 1, name: 1, college: 1, year: 1, branch: 1, currentStatus: 1, lastRequest: 1 }
     );
     if (!hostlers) {
       return res.json({
@@ -681,8 +681,36 @@ exports.getMyRoomies = async (req, res) => {
       });
     }
 
+    // Validate currentStatus for each roommate
+    const now = new Date();
+    const validatedHostlers = hostlers.map(hostler => {
+      const hostelerObj = hostler.toObject();
+
+      if (hostelerObj.lastRequest && (hostelerObj.currentStatus === 'LEAVE' || hostelerObj.currentStatus === 'PERMISSION')) {
+        let isCurrentlyActive = false;
+
+        if (hostelerObj.currentStatus === 'LEAVE' && hostelerObj.lastRequest.fromDate && hostelerObj.lastRequest.toDate) {
+          const from = new Date(hostelerObj.lastRequest.fromDate);
+          const to = new Date(hostelerObj.lastRequest.toDate);
+          if (now >= from && now <= to) isCurrentlyActive = true;
+        } else if (hostelerObj.currentStatus === 'PERMISSION' && hostelerObj.lastRequest.fromTime && hostelerObj.lastRequest.toTime) {
+          const from = new Date(hostelerObj.lastRequest.fromTime);
+          const to = new Date(hostelerObj.lastRequest.toTime);
+          if (now >= from && now <= to) isCurrentlyActive = true;
+        }
+
+        if (!isCurrentlyActive) {
+          hostelerObj.currentStatus = 'HOSTEL';
+        }
+      }
+
+      // Remove lastRequest from response
+      delete hostelerObj.lastRequest;
+      return hostelerObj;
+    });
+
     // Extract usernames (assuming rollNo is used for images like in pending requests)
-    const usernames = hostlers.map((student) => student.rollNo);
+    const usernames = validatedHostlers.map((student) => student.rollNo);
 
     // Fetch images for those usernames
     const images = await ImageModel.find({
@@ -698,7 +726,7 @@ exports.getMyRoomies = async (req, res) => {
     }));
 
     res.status(200).json({
-      hostlers, // Students array
+      hostlers: validatedHostlers, // Students array
       images: imageData, // Separate array for images
     });
   } catch (error) {
