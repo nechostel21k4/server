@@ -38,113 +38,135 @@ exports.approveRequest = async (req, res) => {
         .json({ updated: false, message: "Hosteler not found" });
     }
 
-    if (hosteler.lastRequest.id === request.id) {
-      if (request.status === "ACCEPTED" && request.isActive) {
-        const phoneNumber = hosteler.parentPhoneNo;
-        let gender = "అమ్మాయి";
-        if (hosteler.gender) {
-          const g = hosteler.gender.toLowerCase();
-          if (g === 'male' || g === 'm') gender = "అబ్బాయి";
-        } else if (request.id.startsWith("BH")) {
-          gender = "అబ్బాయి";
-        }
-
-        // Translate hosteler name to Telugu
-        const teluguName = await transliterateName(hosteler.name);
-
-        let variables;
-
-        if (request.type === "PERMISSION") {
-          variables = [
-            gender + " " + teluguName,
-            formatDate.formatDate(new Date(request.date)),
-            formatDate.formatTime(new Date(request.fromTime)),
-            formatDate.formatDate(new Date(request.date)),
-            formatDate.formatTime(new Date(request.toTime)),
-            "ఔటింగ్ కి",
-          ];
-        } else if (request.type === "LEAVE") {
-          variables = [
-            gender + " " + teluguName,
-            formatDate.formatDate(new Date(request.fromDate)),
-            formatDate.formatTime(new Date(request.fromDate)),
-            formatDate.formatDate(new Date(request.toDate)),
-            formatDate.formatTime(new Date(request.toDate)),
-            "ఇంటికి",
-          ];
-        }
-
-        try {
-          const smsResponse = await sendSMS(
-            phoneNumber,
-            OUTGOING_TEMPLATE_ID,
-            OUTGOING_MSG,
-            variables
-          );
-
-          if (!smsResponse.success) {
-            return res.status(200).json({
-              updated: false,
-              message: "Failed to send SMS. Try Again",
-            });
-          }
-        } catch (err) {
-          return res
-            .status(200)
-            .json({ updated: false, message: "Failed to send SMS. Try Again" });
-        }
-
-        await Hosteler.findOneAndUpdate(
-          { rollNo: request.rollNo },
-          {
-            lastRequest: request,
-            currentStatus:
-              request.status === "ACCEPTED"
-                ? request.type.toUpperCase()
-                : "HOSTEL",
-          },
-          { new: true }
-        );
-
-        await Request.findByIdAndUpdate(
-          request._id,
-          { $set: request }, // Use $set to update fields safely
-          { new: true }
-        );
-
-        return res
-          .status(200)
-          .json({ updated: true, message: "Notified to parent via SMS" });
-      } else if (request.status === "REJECTED") {
-        await Hosteler.findOneAndUpdate(
-          { rollNo: request.rollNo },
-          {
-            lastRequest: request,
-            currentStatus: "HOSTEL",
-          },
-          { new: true }
-        );
-
-        await Request.findByIdAndUpdate(
-          request._id,
-          { $set: request }, // Use $set to update fields safely
-          { new: true }
-        );
-
-        return res
-          .status(200)
-          .json({ updated: true, message: "Request Rejected Successfully" });
+    // Logic for ACCEPTED requests
+    if (request.status === "ACCEPTED" && request.isActive) {
+      const phoneNumber = hosteler.parentPhoneNo;
+      let gender = "అమ్మాయి";
+      if (hosteler.gender) {
+        const g = hosteler.gender.toLowerCase();
+        if (g === 'male' || g === 'm') gender = "అబ్బాయి";
+      } else if (request.id.startsWith("BH")) {
+        gender = "అబ్బాయి";
       }
+
+      // Translate hosteler name to Telugu
+      const teluguName = await transliterateName(hosteler.name);
+
+      let variables;
+
+      // Determine if the request is CURRENTLY active based on time
+      // This prevents future leaves from marking the student as "LEAVE" (Absent) immediately.
+      const now = new Date();
+      let isCurrentlyActive = false;
+
+      if (request.type === "PERMISSION") {
+        variables = [
+          gender + " " + teluguName,
+          formatDate.formatDate(new Date(request.date)),
+          formatDate.formatTime(new Date(request.fromTime)),
+          formatDate.formatDate(new Date(request.date)),
+          formatDate.formatTime(new Date(request.toTime)),
+          "ఔటింగ్ కి",
+        ];
+        // Check time range for permission
+        const from = new Date(request.fromTime);
+        const to = new Date(request.toTime);
+        if (now >= from && now <= to) isCurrentlyActive = true;
+
+      } else if (request.type === "LEAVE") {
+        variables = [
+          gender + " " + teluguName,
+          formatDate.formatDate(new Date(request.fromDate)),
+          formatDate.formatTime(new Date(request.fromDate)),
+          formatDate.formatDate(new Date(request.toDate)),
+          formatDate.formatTime(new Date(request.toDate)),
+          "ఇంటికి",
+        ];
+        // Check date range for leave
+        const from = new Date(request.fromDate);
+        const to = new Date(request.toDate);
+        if (now >= from && now <= to) isCurrentlyActive = true;
+      }
+
+      try {
+        const smsResponse = await sendSMS(
+          phoneNumber,
+          OUTGOING_TEMPLATE_ID,
+          OUTGOING_MSG,
+          variables
+        );
+
+        if (!smsResponse.success) {
+          return res.status(200).json({
+            updated: false,
+            message: "Failed to send SMS. Try Again",
+          });
+        }
+      } catch (err) {
+        return res
+          .status(200)
+          .json({ updated: false, message: "Failed to send SMS. Try Again" });
+      }
+
+      // Update Hosteler
+      // always update lastRequest so history is correct.
+      // ONLY update currentStatus if the leave/permission is active NOW.
+      const hostelerUpdate = {
+        lastRequest: request
+      };
+
+      if (isCurrentlyActive) {
+        hostelerUpdate.currentStatus = request.type.toUpperCase();
+      }
+
+      await Hosteler.findOneAndUpdate(
+        { rollNo: request.rollNo },
+        hostelerUpdate,
+        { new: true }
+      );
+
+      await Request.findByIdAndUpdate(
+        request._id,
+        { $set: request }, // Use $set to update fields safely
+        { new: true }
+      );
+
+      return res
+        .status(200)
+        .json({ updated: true, message: "Notified to parent via SMS" });
+
+    } else if (request.status === "REJECTED") {
+      // Logic for REJECTED requests
+      await Hosteler.findOneAndUpdate(
+        { rollNo: request.rollNo },
+        {
+          lastRequest: request,
+          currentStatus: "HOSTEL",
+        },
+        { new: true }
+      );
+
+      await Request.findByIdAndUpdate(
+        request._id,
+        { $set: request }, // Use $set to update fields safely
+        { new: true }
+      );
+
+      return res
+        .status(200)
+        .json({ updated: true, message: "Request Rejected Successfully" });
     }
+
+    // Fallback Update
     await Request.findByIdAndUpdate(
       request._id,
-      { $set: request }, // Use $set to update fields safely
+      { $set: request },
       { new: true }
     );
 
     return res
       .status(200)
-      .json({ updated: true, message: "This is not a current active Request but updated successfully.Please find correct one related to student" });
+      .json({ updated: true, message: "Request updated successfully." });
   } catch (error) {
     console.error("Error approving request:", error);
     return res.status(200).json({ updated: false, message: "Server error" });

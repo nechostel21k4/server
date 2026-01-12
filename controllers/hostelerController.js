@@ -138,6 +138,29 @@ exports.getHostelerByRollNo = async (req, res) => {
     const hostelerObj = hosteler.toObject();
     hostelerObj.isRegistered = !!isRegistered;
 
+    // Validate currentStatus against lastRequest dates
+    if (hostelerObj.lastRequest && (hostelerObj.currentStatus === 'LEAVE' || hostelerObj.currentStatus === 'PERMISSION')) {
+      const now = new Date();
+      let isCurrentlyActive = false;
+
+      if (hostelerObj.currentStatus === 'LEAVE' && hostelerObj.lastRequest.fromDate && hostelerObj.lastRequest.toDate) {
+        const from = new Date(hostelerObj.lastRequest.fromDate);
+        const to = new Date(hostelerObj.lastRequest.toDate);
+        if (now >= from && now <= to) isCurrentlyActive = true;
+      } else if (hostelerObj.currentStatus === 'PERMISSION' && hostelerObj.lastRequest.fromTime && hostelerObj.lastRequest.toTime) {
+        const from = new Date(hostelerObj.lastRequest.fromTime);
+        const to = new Date(hostelerObj.lastRequest.toTime);
+        if (now >= from && now <= to) isCurrentlyActive = true;
+      }
+
+      // If not currently active, reset to HOSTEL
+      if (!isCurrentlyActive) {
+        hostelerObj.currentStatus = 'HOSTEL';
+        // Also update the database
+        await Hosteler.findOneAndUpdate({ rollNo }, { currentStatus: 'HOSTEL' });
+      }
+    }
+
     res.status(200).json({ isExist: true, hosteler: hostelerObj });
   } catch (error) {
     res.json({ message: error.message });
