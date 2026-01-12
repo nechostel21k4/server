@@ -144,6 +144,63 @@ exports.getHostelerByRollNo = async (req, res) => {
   }
 };
 
+// Search hosteler by RollNo or Name
+exports.searchHosteler = async (req, res) => {
+  try {
+    const key = req.params.key;
+
+    // Try finding by exact RollNo first
+    let hosteler = await Hosteler.findOne({ rollNo: key.toUpperCase() });
+
+    // If not found, try finding by Name (case-insensitive regex)
+    if (!hosteler) {
+      // Escape special regex characters to prevent errors
+      const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const nameRegex = new RegExp(escapedKey, 'i');
+      hosteler = await Hosteler.findOne({ name: { $regex: nameRegex } });
+    }
+
+    if (!hosteler) {
+      return res.json({ isExist: false, message: "Hosteler not found" });
+    }
+
+    // Check Face Registration Status
+    const creds = await HostlerCredentials.findOne({ rollNo: hosteler.rollNo });
+    const isRegistered = creds && creds.faceDescriptor && creds.faceDescriptor.length > 0;
+
+    // Append status to hosteler object
+    const hostelerObj = hosteler.toObject();
+    hostelerObj.isRegistered = !!isRegistered;
+
+    res.status(200).json({ isExist: true, hosteler: hostelerObj });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get suggestions for autocomplete
+exports.getStudentSuggestions = async (req, res) => {
+  try {
+    const key = req.params.key;
+    // Escape special regex characters
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapedKey, 'i');
+
+    const suggestions = await Hosteler.find({
+      $or: [
+        { rollNo: { $regex: regex } },
+        { name: { $regex: regex } }
+      ]
+    })
+      .select('name rollNo')
+      .limit(10); // Limit to 10 results
+
+    res.status(200).json(suggestions);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Get hostlers by filter criteria
 exports.getFilteredHostlers = async (req, res) => {
   try {
@@ -182,7 +239,7 @@ exports.getFilteredHostlers = async (req, res) => {
       username: img.username,
       imagePath: img.path && img.path.startsWith('http')
         ? img.path
-        : `${process.env.IP}/uploads/${img.filename}`,
+        : `${req.protocol}://${req.get('host')}/uploads/${img.filename}`,
     }));
 
     res.status(200).json({
@@ -574,7 +631,7 @@ exports.getHostelersByRoomNo = async (req, res) => {
       username: img.username,
       imagePath: img.path && img.path.startsWith('http')
         ? img.path
-        : `${process.env.IP}/uploads/${img.filename}`,
+        : `${req.protocol}://${req.get('host')}/uploads/${img.filename}`,
     }));
 
     res.status(200).json({
@@ -614,7 +671,7 @@ exports.getMyRoomies = async (req, res) => {
       username: img.username,
       imagePath: img.path && img.path.startsWith('http')
         ? img.path
-        : `${process.env.IP}/uploads/${img.filename}`,
+        : `${req.protocol}://${req.get('host')}/uploads/${img.filename}`,
     }));
 
     res.status(200).json({

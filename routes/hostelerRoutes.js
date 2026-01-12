@@ -8,6 +8,8 @@ const authenticateUser = require("../middleware/auth");
 router.post('/create', authenticateUser, hostelerController.createHosteler); // adding student details through admin
 router.get('/verify/:RollNo', hostelerController.verifyStudent) //it is used  in forgot password to verify student
 router.get('/register/:RollNo', hostelerController.verifyRegisterStudent) //verifying student exist or not in regestration
+router.get('/search/:key', authenticateUser, hostelerController.searchHosteler); // Search by RollNo or Name
+router.get('/suggestions/:key', authenticateUser, hostelerController.getStudentSuggestions); // Autocomplete suggestions
 router.get('/:RollNo', authenticateUser, hostelerController.getHostelerByRollNo);//get student details by RollNo 
 router.post('/getAll', authenticateUser, hostelerController.getFilteredHostlers);//get all students data by taking hostelid,clg,year,branch
 

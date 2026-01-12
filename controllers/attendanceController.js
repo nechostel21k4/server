@@ -337,13 +337,11 @@ exports.getDailyLeaves = async (req, res) => {
         if (!date) return res.status(400).json({ message: "Date is required" });
 
         // Construct start and end of the target day
-        // Assuming date is in local time representation "YYYY-MM-DD"
-        // We create a range that covers that whole day.
-        const startOfDay = new Date(date);
-        startOfDay.setHours(0, 0, 0, 0);
-
-        const endOfDay = new Date(date);
-        endOfDay.setHours(23, 59, 59, 999);
+        // We force IST (UTC+05:30) interpretation since the institution is in India.
+        // This ensures that "2026-01-14" covers 00:00 to 23:59 IST,
+        // which corresponds to 18:30 (prev day) to 18:29 UTC.
+        const startOfDay = new Date(`${date}T00:00:00+05:30`);
+        const endOfDay = new Date(`${date}T23:59:59.999+05:30`);
 
         const query = {
             status: 'ACCEPTED',
@@ -366,6 +364,36 @@ exports.getDailyLeaves = async (req, res) => {
         }
 
         const leaves = await Request.find(query);
+        res.status(200).json(leaves);
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+exports.getUpcomingLeaves = async (req, res) => {
+    try {
+        const { date, hostelId } = req.query; // YYYY-MM-DD
+        if (!date) return res.status(400).json({ message: "Date is required" });
+
+        // End of Today (IST)
+        const endOfDay = new Date(`${date}T23:59:59.999+05:30`);
+
+        const query = {
+            status: 'ACCEPTED',
+            type: 'LEAVE',
+            fromDate: { $gt: endOfDay } // Strictly future leaves
+        };
+
+        if (hostelId && hostelId !== 'BOTH') {
+            query.hostelId = hostelId;
+        }
+
+        // Limit to reasonable future (e.g. next 30 days) or just all? 
+        // Let's get all for now, frontend can filter or valid.
+        // Actually, maybe just next 1 month is enough to avoid fetching next year's leave.
+        // But for "Absent" check, any future leave is interesting.
+        const leaves = await Request.find(query).sort({ fromDate: 1 });
         res.status(200).json(leaves);
 
     } catch (error) {

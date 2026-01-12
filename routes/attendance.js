@@ -13,5 +13,6 @@ router.get('/history/:studentId', attendanceController.getAttendanceHistory);
 router.get('/daily', attendanceController.getDailyAttendance);
 router.get('/registration-status', attendanceController.getRegistrationStatus);
 router.get('/daily-leaves', attendanceController.getDailyLeaves);
+router.get('/upcoming-leaves', attendanceController.getUpcomingLeaves);
 
 module.exports = router;

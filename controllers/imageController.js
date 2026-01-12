@@ -13,7 +13,9 @@ exports.getImageByUsername = async (req, res) => {
         if (image.path && image.path.startsWith('http')) {
             imagePath = image.path;
         } else {
-            imagePath = `${process.env.IP}/uploads/${image.filename}`;
+            // Fallback for local uploads
+            const baseUrl = `${req.protocol}://${req.get('host')}`;
+            imagePath = `${baseUrl}/uploads/${image.filename}`;
         }
 
         res.json({ imageExist: true, imagePath: imagePath });
