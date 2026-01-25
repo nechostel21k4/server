@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: hostel-attendance-backend
+    env: node
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_VERSION
+        value: 18.17.0
+      - key: MONGODB_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: BULK_SMS_API_URL
+        sync: false
+      - key: BULK_SMS_API_KEY
+        sync: false
+      - key: BULK_SMS_USERNAME
+        sync: false
+      - key: BULK_SMS_SENDER_ID
+        sync: false
+      - key: OTP_TEMPLATE_ID
+        sync: false
+      - key: RETURN_TEMPLATE_ID
+        sync: false

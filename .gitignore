@@ -1,0 +1,30 @@
+# Ignore node_modules
+node_modules/
+.env
+
+uploads/*
+!.gitkeep
+
+# Ignore log files
+logs/
+*.log
+
+# Ignore cache and temporary files
+*.cache
+*.tmp
+
+# Ignore OS-generated files
+.DS_Store
+Thumbs.db
+
+# Debug and Seed scripts
+debug*.js
+test*.js
+check*.js
+create_admin_*.js
+create_faculty.js
+verify_cloudinary.js
+listUsers.js
+downloadModels.js
+seedHostels.js
+telugu.js
