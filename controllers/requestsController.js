@@ -131,6 +131,9 @@ exports.approveRequest = async (req, res) => {
         { new: true }
       );
 
+      const io = req.app.get("io");
+      io.emit("requestUpdated", { hostelId: request.hostelId });
+
       return res
         .status(200)
         .json({ updated: true, message: "Notified to parent via SMS" });
@@ -151,6 +154,9 @@ exports.approveRequest = async (req, res) => {
         { $set: request }, // Use $set to update fields safely
         { new: true }
       );
+
+      const io = req.app.get("io");
+      io.emit("requestUpdated", { hostelId: request.hostelId });
 
       return res
         .status(200)
@@ -245,6 +251,9 @@ exports.arriveRequest = async (req, res) => {
         { $set: request }, // Use $set to update fields safely
         { new: true }
       );
+
+      const io = req.app.get("io");
+      io.emit("requestUpdated", { hostelId: request.hostelId });
 
       return res
         .status(200)
@@ -346,6 +355,9 @@ exports.CancelRequestById = async (req, res) => {
           { $set: request }, // Use $set to update fields safely
           { new: true }
         );
+
+        const io = req.app.get("io");
+        io.emit("requestUpdated", { hostelId: request.hostelId });
 
         return res
           .status(200)
