@@ -266,6 +266,15 @@ exports.arriveRequest = async (req, res) => {
       const io = req.app.get("io");
       io.emit("requestUpdated", { hostelId: request.hostelId });
 
+      // Send Push Notification
+      try {
+        const notificationTitle = "Arrival Confirmed";
+        const notificationMessage = `You have arrived at the hostel.`;
+        await sendNotification([request.rollNo], notificationTitle, notificationMessage, { requestId: request._id });
+      } catch (notifyErr) {
+        console.error("Failed to send arrival push notification:", notifyErr);
+      }
+
       return res
         .status(200)
         .json({ updated: true, message: "Notified to parent via SMS" });
