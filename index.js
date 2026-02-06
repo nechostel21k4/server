@@ -27,6 +27,18 @@ const attendanceRoutes = require("./routes/attendance");
 const { default: mongoose } = require("mongoose");
 
 const app = express();
+const http = require("http");
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Allow all origins (adjust for production)
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  },
+});
+
+app.set("io", io);
 
 // Connect to database
 connectDB();
@@ -76,7 +88,7 @@ app.get("/", (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 

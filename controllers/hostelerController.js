@@ -483,6 +483,42 @@ exports.updateHostelerByRollNo = async (req, res) => {
 exports.createRequestAndUpdateStudent = async (req, res) => {
   try {
     const { student, lastRequest } = req.body;
+
+    // Check for existing active request
+    const existingHosteler = await Hosteler.findOne({ rollNo: req.params.RollNo });
+    if (existingHosteler && existingHosteler.lastRequest) {
+      const prevReq = existingHosteler.lastRequest;
+
+      // 1. If Pending (Submitted), block
+      if (prevReq.status === 'SUBMITTED' && prevReq.isActive) {
+        return res.status(400).json({
+          success: false,
+          message: "You already have a pending request. Please wait for approval or delete it."
+        });
+      }
+
+      // 2. If Accepted, check if it's currently active or future
+      if (prevReq.status === 'ACCEPTED' && prevReq.isActive) {
+        const now = new Date();
+        let isActive = false;
+
+        if (prevReq.type === 'LEAVE' && prevReq.toDate) {
+          const toDate = new Date(prevReq.toDate);
+          if (now <= toDate) isActive = true;
+        } else if (prevReq.type === 'PERMISSION' && prevReq.toTime) {
+          const toTime = new Date(prevReq.toTime);
+          if (now <= toTime) isActive = true;
+        }
+
+        if (isActive) {
+          return res.status(400).json({
+            success: false,
+            message: "You have an active accepted request. You cannot apply until it expires or you arrive."
+          });
+        }
+      }
+    }
+
     const newRequest = new Request(lastRequest);
     const res1 = await newRequest.save();
 
