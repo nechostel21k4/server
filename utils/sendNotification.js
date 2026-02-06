@@ -36,13 +36,17 @@ const sendNotification = async (userIds, title, message, data = {}, segments = [
             return;
         }
 
+        console.log("Sending Notification Payload:", JSON.stringify(payload, null, 2));
+
         const response = await axios.post("https://onesignal.com/api/v1/notifications", payload, { headers });
-        console.log("Notification sent successfully:", response.data);
+        console.log("OneSignal Response:", response.data);
         return response.data;
 
     } catch (error) {
-        console.error("Error sending notification:", error.response ? error.response.data : error.message);
-        // Don't throw error to prevent blocking main flow
+        console.error("Error sending notification:", error.message);
+        if (error.response) {
+            console.error("OneSignal Error Response:", JSON.stringify(error.response.data, null, 2));
+        }
     }
 };
 
