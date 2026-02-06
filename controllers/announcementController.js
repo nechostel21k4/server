@@ -1,5 +1,7 @@
 const Announcement = require('../models/Announcement');
 const cloudinary = require('cloudinary').v2;
+const sendNotification = require('../utils/sendNotification');
+const Hosteler = require('../models/Hostelers');
 
 // Create Announcement
 exports.createAnnouncement = async (req, res) => {
@@ -21,6 +23,33 @@ exports.createAnnouncement = async (req, res) => {
         });
 
         await newAnnouncement.save();
+
+        // Send Notification
+        try {
+            let userIds = [];
+            let segments = [];
+
+            if (!hostelId || hostelId === "ALL" || hostelId === "") {
+                // Global - maybe target all active users or a segment if you have one
+                // For now, let's try targeting all "Subscribed Users" via segment if possible, or we need to fetch all distinct roll numbers.
+                // Better approach with OneSignal Free plan: "Subscribed Users" segment
+                segments = ["Subscribed Users"];
+            } else {
+                // Target specific hostel students
+                // We need to find all students in this hostel to get their Roll Numbers (External User IDs)
+                // Or if you use OneSignal Tags, you could tag users with 'hostelId'.
+                // Assuming we don't have tags yet, let's fetch students.
+                const students = await Hosteler.find({ hostelId: hostelId }).select('rollNo');
+                userIds = students.map(s => s.rollNo);
+            }
+
+            if (segments.length > 0 || userIds.length > 0) {
+                await sendNotification(userIds, "New Announcement", title, { announcementId: newAnnouncement._id }, segments);
+            }
+
+        } catch (notifyError) {
+            console.error("Failed to send announcement notification:", notifyError);
+        }
 
         res.status(201).json({ success: true, message: 'Announcement created successfully', announcement: newAnnouncement });
     } catch (error) {

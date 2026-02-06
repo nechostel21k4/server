@@ -5,6 +5,7 @@ const sendSMS = require("../utils/sendSMS");
 const formatDate = require("../utils/formatDate");
 const { ImageModel } = require("../models/ProfileImage");
 const { transliterateName } = require("../utils/transliterationUtils");
+const sendNotification = require("../utils/sendNotification");
 
 const dotenv = require("dotenv");
 dotenv.config();
@@ -133,6 +134,16 @@ exports.approveRequest = async (req, res) => {
 
       const io = req.app.get("io");
       io.emit("requestUpdated", { hostelId: request.hostelId });
+
+
+      // Send Push Notification
+      try {
+        const notificationTitle = "Request Approved";
+        const notificationMessage = `Your ${request.type} request has been approved.`;
+        await sendNotification([request.rollNo], notificationTitle, notificationMessage, { requestId: request._id });
+      } catch (notifyErr) {
+        console.error("Failed to send push notification:", notifyErr);
+      }
 
       return res
         .status(200)
