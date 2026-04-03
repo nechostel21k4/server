@@ -100,12 +100,24 @@ exports.sendHolidayMsgs = async (req, res) => {
         );
         if (smsResult.success) {
           totalMessagesSent++;
-        } else {
-          // Failed to send SMS to phoneNumber for college currentCollege: smsResult.error
+        } else if (smsResult.message.includes("Insufficient Balance")) {
+          // If balance is out, stop immediately and inform user
+          return res.status(200).json({
+            success: false,
+            message: "SMS API Error: " + smsResult.message + ". Please top up your credits.",
+            totalMessagesSent: 0,
+          });
         }
       }
+    }
 
-      // Messages sent for college: ${currentCollege}
+    // Skip logging if NO messages were sent (totalMessagesSent === 0)
+    if (totalMessagesSent === 0) {
+      return res.status(200).json({
+        success: false,
+        message: "No messages sent. Check student filters or SMS balance.",
+        totalMessagesSent: 0,
+      });
     }
 
     try {
@@ -121,7 +133,7 @@ exports.sendHolidayMsgs = async (req, res) => {
       });
       await holidayMsg.save();
     } catch (err) {
-      // Error while adding holiday msg to holidayMsg Schema
+      console.error("Error saving holiday message:", err.message);
     }
 
     res.status(200).json({
@@ -130,6 +142,7 @@ exports.sendHolidayMsgs = async (req, res) => {
       totalMessagesSent,
     });
   } catch (error) {
+    console.error("Error sending holiday messages:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };

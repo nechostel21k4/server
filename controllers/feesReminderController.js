@@ -1,6 +1,6 @@
 const FeesReminder = require("../models/FeesReminder");
 const Hosteler = require("../models/Hostelers");
-const sendSMS = require("../utils/sendSMS");
+const sendFeesSMS = require("../utils/sendFeesSMS");
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -57,10 +57,10 @@ exports.sendFeesReminders = async (req, res) => {
       for (const student of students) {
         const genderWord = student.gender?.toUpperCase() === "MALE" ? "మీ అబ్బాయి" : "మీ అమ్మాయి";
         
-        // Variables: {var1}=Year, {var2}=Non-AC, {var3}=GenderWord, {var4}=AC
-        const variables = [year === "ALL" ? "ALL" : `${year} Year`, feeAmountNonAC, genderWord, feeAmountAC];
+        // Variables match approved template order: {#var#}=genderWord, {#var#}=year, {#var#}=NonAC, {#var#}=AC
+        const variables = [genderWord, year === "ALL" ? "ALL" : `${year} Year`, feeAmountNonAC, feeAmountAC];
 
-        const smsResult = await sendSMS(
+        const smsResult = await sendFeesSMS(
           student.parentPhoneNo,
           FEES_TEMPLATE_ID,
           FEES_MSG_TEMPLATE,
@@ -69,8 +69,24 @@ exports.sendFeesReminders = async (req, res) => {
 
         if (smsResult.success) {
           totalMessagesSent++;
+        } else if (smsResult.message.includes("Insufficient Balance")) {
+          // If balance is out, stop immediately and inform user
+          return res.status(200).json({
+            success: false,
+            message: "SMS API Error: " + smsResult.message + ". Please top up your credits.",
+            totalMessagesSent: 0,
+          });
         }
       }
+    }
+
+    // Skip logging if NO messages were sent (totalMessagesSent === 0)
+    if (totalMessagesSent === 0) {
+      return res.status(200).json({
+        success: false,
+        message: "No messages sent. Check student filters or SMS balance.",
+        totalMessagesSent: 0,
+      });
     }
 
     // Log the transaction

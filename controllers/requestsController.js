@@ -99,7 +99,7 @@ exports.approveRequest = async (req, res) => {
         if (!smsResponse.success) {
           return res.status(200).json({
             updated: false,
-            message: "Failed to send SMS. Try Again",
+            message: smsResponse.message || "Failed to send SMS. Try Again",
           });
         }
       } catch (err) {
@@ -223,7 +223,7 @@ exports.arriveRequest = async (req, res) => {
         if (!smsResponse.success) {
           return res.status(200).json({
             updated: false,
-            message: "Failed to send SMS. Try Again",
+            message: smsResponse.message || "Failed to send SMS. Try Again",
           });
         }
       } catch (error) {
@@ -329,7 +329,7 @@ exports.CancelRequestById = async (req, res) => {
           if (!smsResponse.success) {
             return res.status(200).json({
               updated: false,
-              message: "Failed to send SMS. Try Again",
+              message: smsResponse.message || "Failed to send SMS. Try Again",
             });
           }
         } catch (err) {
