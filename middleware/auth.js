@@ -12,7 +12,6 @@ const authenticateUser = (req, res, next) => {
   try {
     const decoded = jwt.verify(token.replace("Bearer ", ""), process.env.JWT_SECRET);
     req.user = decoded; // Attach decoded user info to the request
-    // console.log("user Verified...",req.user)
     next();
   } catch (error) {
     return res

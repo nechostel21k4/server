@@ -1,9 +1,6 @@
 // controllers/adminController.js
 const Admin = require('../models/Admin');
-const { forgotPassword } = require("./adminLoginController"); 
-  
-// Create an admin
-const {createAdminLogin}=require('./adminLoginController')
+const { forgotPassword, createAdminLogin, deleteAdmin } = require("./adminLoginController");
 
 exports.createAdmin = async (req, res) => {
     try {
@@ -82,7 +79,7 @@ exports.updateAdminByUsername = async (req, res) => {
 };
 
 // Delete an admin by username
-const { deleteAdmin } = require('./adminLoginController')
+
 exports.deleteAdminByUsername = async (req, res) => {
     try {
         const admin = await Admin.findOneAndDelete({ eid: req.params.username });
@@ -141,26 +138,3 @@ exports.verifyAdmin = async (req, res) => {
 
 
 //Admin login
-// exports.login = async (req, res) => {
-//     const { username, password } = req.body;  
-//     try {
-//       // Check if admin exists
-//       const admin = await Admin.findOne({ username });  
-//       if (!admin) {
-//         return res.status(404).json({ success: false, message: 'Admin not found' });
-//       }
-  
-//       // Validate password
-//       if(admin.password !==password){
-//         return res.status(404).json({ success: false, message: 'Password is incorrect'})
-//       }
-  
-//       // If username and password are correct, return success
-//       console.log("success")
-//       res.status(200).json({ success: true, message: 'Login successful' });
-  
-//     } catch (error) {
-//       console.error('Error logging in admin:', error);
-//       res.status(500).json({ success: false, message: 'Server error. Please try again later.' });
-//     }
-//   };

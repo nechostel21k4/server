@@ -1,6 +1,6 @@
 // models/HolidayMsg.js
 const mongoose = require('mongoose');
-const {formatDate} = require("../sampleUtils/formatDate")
+const {formatDate} = require("../utils/formatDate")
 
 const HolidayMsgSchema = new mongoose.Schema(
   {

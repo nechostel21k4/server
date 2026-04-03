@@ -47,7 +47,6 @@ exports.markAttendance = async (req, res) => {
 
         const existing = await Attendance.findOne({ studentId, date: today });
         if (existing) {
-            console.log(`[Attendance] Duplicate Blocked: ${studentId} already present on ${today}`);
             return res.status(400).json({ message: "Attendance already marked for today." });
         }
 
@@ -58,7 +57,6 @@ exports.markAttendance = async (req, res) => {
         let targetHostel = hostel;
 
         if (!targetHostel) {
-            console.log("Warning: Hostel not found in database.");
             return res.status(404).json({ message: "Hostel configuration not found." });
         }
 
@@ -98,7 +96,7 @@ exports.markAttendance = async (req, res) => {
             distance = Math.round(distance * 100) / 100;
             const maxRadius = targetHostel.geoCoordinates.radius || 200;
 
-            console.log(`[Attendance] Distance: ${distance}m (Max: ${maxRadius}m)`);
+
 
             if (distance <= maxRadius) {
                 isWithinGeofence = true;
@@ -108,7 +106,6 @@ exports.markAttendance = async (req, res) => {
                 isWithinGeofence = false;
                 attendanceStatus = 'Absent';
                 attendanceRemarks = `Outside geofence (${distance}m > ${maxRadius}m)`;
-                console.log(`[Attendance] Location Mis-match: Marking as ABSENT.`);
             }
         } else {
             // Fallback if no geofence set
@@ -119,17 +116,7 @@ exports.markAttendance = async (req, res) => {
         // 3. Verify Face
         const studentCreds = await HostlerCredentials.findOne({ rollNo: studentId });
 
-        // DEBUG LOGGING
-        console.log(`[Attendance] Verifying for ${studentId}`);
-        console.log(`[Attendance] Creds found: ${!!studentCreds}`);
-        if (studentCreds) {
-            console.log(`[Attendance] Descriptor type: ${typeof studentCreds.faceDescriptor}, IsArray: ${Array.isArray(studentCreds.faceDescriptor)}`);
-            console.log(`[Attendance] Descriptor length: ${studentCreds.faceDescriptor ? studentCreds.faceDescriptor.length : 'NULL'}`);
-        }
-
-        // Strict Check: Ensure descriptor is an array and has length (Float32Array usually has 128 elements)
         if (!studentCreds || !studentCreds.faceDescriptor || studentCreds.faceDescriptor.length < 100) {
-            console.log(`[Attendance] Blocked: Face not registered.`);
             return res.status(400).json({ message: "Face not registered. Please register your face first." });
         }
 
@@ -137,7 +124,6 @@ exports.markAttendance = async (req, res) => {
 
         // OPTIMIZATION: Check if client sent the descriptor directly
         if (req.body.faceDescriptor) {
-            console.log("[Attendance] Using client-provided descriptor");
             try {
                 const clientDescriptor = JSON.parse(req.body.faceDescriptor);
                 // Convert to Float32Array or array depending on what FaceService expects (isFaceMatch handles both usually, but let's be safe)
@@ -146,20 +132,16 @@ exports.markAttendance = async (req, res) => {
 
                 matchResult = FaceService.isFaceMatch(studentCreds.faceDescriptor, clientDescriptor);
             } catch (e) {
-                console.error("[Attendance] Invalid client descriptor:", e);
                 return res.status(400).json({ message: "Invalid face descriptor format." });
             }
         } else {
             // Fallback: Compute on server (Slow)
-            console.log("[Attendance] improved server-side descriptor calculation");
             const uploadedDescriptor = await FaceService.getFaceDescriptor(file.buffer);
             if (!uploadedDescriptor) {
                 return res.status(400).json({ message: "No face detected in the image." });
             }
             matchResult = FaceService.isFaceMatch(studentCreds.faceDescriptor, uploadedDescriptor);
         }
-
-        console.log(`[Attendance] Match Result: ${JSON.stringify(matchResult)}`);
 
         if (!matchResult.isMatch) {
             return res.status(403).json({ message: "Face verification failed. Unauthorized." });
@@ -197,7 +179,6 @@ exports.markAttendance = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
         res.status(500).json({ message: "Server Error", error: error.message });
     }
 };
@@ -215,7 +196,6 @@ exports.registerFace = async (req, res) => {
 
         // OPTIMIZATION: Check if client sent the descriptor
         if (req.body.faceDescriptor) {
-            console.log("[Register] Using client-provided descriptor");
             try {
                 // Parse if stringified
                 const parsed = typeof req.body.faceDescriptor === 'string'
@@ -224,12 +204,10 @@ exports.registerFace = async (req, res) => {
 
                 descriptor = new Float32Array(parsed); // Ensure Float32Array
             } catch (e) {
-                console.error("[Register] Invalid client descriptor:", e);
                 return res.status(400).json({ message: "Invalid face descriptor format." });
             }
         } else {
             // Fallback: Compute on server (Slow)
-            console.log("[Register] Performing server-side detection...");
             descriptor = await FaceService.getFaceDescriptor(file.buffer);
             if (!descriptor) {
                 return res.status(400).json({ message: "No face detected. Try again." });
@@ -258,7 +236,6 @@ exports.registerFace = async (req, res) => {
         res.status(200).json({ message: "Face registered successfully." });
 
     } catch (error) {
-        console.error(error);
         res.status(500).json({ message: "Registration failed", error: error.message });
     }
 }

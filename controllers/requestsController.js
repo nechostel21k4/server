@@ -174,7 +174,6 @@ exports.approveRequest = async (req, res) => {
       .status(200)
       .json({ updated: true, message: "Request updated successfully." });
   } catch (error) {
-    console.error("Error approving request:", error);
     return res.status(200).json({ updated: false, message: "Server error" });
   }
 };
@@ -228,7 +227,6 @@ exports.arriveRequest = async (req, res) => {
           });
         }
       } catch (error) {
-        console.log(error);
         return res
           .status(200)
           .json({ updated: false, message: "Failed to send SMS. Try Again" });
@@ -270,7 +268,6 @@ exports.arriveRequest = async (req, res) => {
       .status(200)
       .json({ updated: true, message: "This is not a current active Request but updated successfully.Please find correct one related to student" });
   } catch (error) {
-    console.error("Error Arriving request:", error);
     return res.status(200).json({ updated: false, message: "Server error" });
   }
 };
@@ -394,7 +391,6 @@ exports.CancelRequestById = async (req, res) => {
       .status(200)
       .json({ updated: true, message: "This is not a current active Request but updated successfully.Please find correct one related to student" });
   } catch (error) {
-    console.error("Error Cancelling request:", error);
     return res.status(200).json({ updated: false, message: "Server error" });
   }
 };
@@ -406,7 +402,6 @@ exports.getAllRequestsByRollNumber = async (req, res) => {
     const requests = await Request.find({ rollNo: rollno }).sort({
       createdAt: -1,
     });
-    // console.log(requests);
     res.status(200).json(requests);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -474,7 +469,6 @@ exports.getPendingRequestsByHostelId = async (req, res) => {
       images: imageData, // Separate array for images
     });
   } catch (error) {
-    console.error("Error fetching pending requests:", error);
     res.status(500).json({ message: "Server error. Please try again later." });
   }
 };
@@ -526,7 +520,6 @@ exports.acceptedRequestsByHostelId = async (req, res) => {
       images: imageData, // Separate array for images
     });
   } catch (error) {
-    console.error("Error fetching accepted requests:", error);
     res.status(500).json({ message: "Server error. Please try again later." });
   }
 };
@@ -542,9 +535,6 @@ exports.getArrivedRequestsBetweenDates = async (req, res) => {
 
     const start = new Date(startDate);
     const end = new Date(endDate);
-
-    console.log(startDate);
-    console.log(endDate);
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       return res.json({ message: "Invalid date format" });
@@ -567,7 +557,6 @@ exports.getArrivedRequestsBetweenDates = async (req, res) => {
 
     res.status(200).json(requests);
   } catch (error) {
-    console.error("Error fetching arrived requests:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -610,7 +599,6 @@ exports.getAcceptedRequestsBetweenDates = async (req, res) => {
     // Send the filtered requests in response
     res.status(200).json(requests);
   } catch (error) {
-    console.error("Error fetching accepted requests:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

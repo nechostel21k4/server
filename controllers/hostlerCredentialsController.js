@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const HostlerCredentials = require('../models/HostlerCredentials');
 const Hosteler = require('../models/Hostelers');
@@ -96,16 +96,25 @@ exports.login = async (req, res) => {
         const isMatch = await bcrypt.compare(password, hostler.password);
         if (!isMatch) return res.json({ message: 'Invalid Roll Number or Password' });
 
-        const token = jwt.sign({ id: hostler._id, rollNo: hostler.rollNo }, process.env.JWT_SECRET, { expiresIn: '30m' });
+        const token = jwt.sign({ id: hostler._id, rollNo: hostler.rollNo }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-        // Fetch student profile details
+        // Fetch full student profile details
         const studentProfile = await Hosteler.findOne({ rollNo });
         const studentDetails = studentProfile ? {
             name: studentProfile.name,
+            rollNo: studentProfile.rollNo,
             hostelId: studentProfile.hostelId,
-            branch: studentProfile.branch,
+            roomNo: studentProfile.roomNo || '',
+            college: studentProfile.college || '',
             year: studentProfile.year,
-            isRegistered: hostler.faceDescriptor && hostler.faceDescriptor.length > 0 // Check registration
+            branch: studentProfile.branch || '',
+            gender: studentProfile.gender || '',
+            phoneNo: studentProfile.phoneNo || '',
+            email: studentProfile.email || '',
+            parentName: studentProfile.parentName || '',
+            parentPhoneNo: studentProfile.parentPhoneNo || '',
+            currentStatus: studentProfile.currentStatus || 'HOSTEL',
+            isRegistered: hostler.faceDescriptor && hostler.faceDescriptor.length > 0
         } : {};
 
         res.status(200).json({ success: true, token, student: studentDetails });
@@ -113,6 +122,7 @@ exports.login = async (req, res) => {
         res.json({ message: error.message });
     }
 };
+
 
 // forgot password
 exports.forgotPassword = async (hosteler) => {
@@ -123,7 +133,6 @@ exports.forgotPassword = async (hosteler) => {
 
         if (!hostlerCredentials) {
             throw new Error('Hosteler credentials not found');
-            res.status(200).json({ success: true, token });
         }
 
         // Generate OTP and update the database
@@ -175,7 +184,7 @@ exports.updateHostlerPassword = async (req, res) => {
 
         res.status(200).json({ isUpdated: true, message: 'Password updated successfully' });
     } catch (error) {
-        res.json({ isUpdated: true, message: error.message });
+        res.json({ isUpdated: false, message: error.message });
     }
 };
 
@@ -183,8 +192,6 @@ exports.updateHostlerPassword = async (req, res) => {
 exports.deleteHostler = async ({ params }) => {
     try {
         const { rollNo } = params;
-        // console.log(`Deleting hostler credentials for roll number: ${rollNo}`);
-
         const hostlerCredentials = await HostlerCredentials.findOneAndDelete({ rollNo });
         return { deleted: true, message: 'Hostler credentials deletion process completed' };
     } catch (error) {

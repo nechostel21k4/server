@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const InchargeLogin = require('../models/InchargeLogin');
 const sendSMS = require('../utils/sendSMS')
@@ -54,9 +54,7 @@ exports.login = async (req, res) => {
 exports.forgotPassword = async (inchargeData) => {
     try {
         const { eid, phoneNo } = inchargeData;
-        console.log(eid, phoneNo)
         const incharge = await InchargeLogin.findOne({ eid });
-        console.log(incharge)
 
         if (!incharge) {
             throw new Error('Incharge credentials not found');
@@ -70,7 +68,6 @@ exports.forgotPassword = async (inchargeData) => {
         // Send OTP via SMS
         const messageTemplate = 'NEC HOSTEL: Use OTP {#var1#} to reset your password. DO NOT SHARE this code with anyone. NEC Hostels, GEDNEC';
         const templateId = OTP_TEMPLATE_ID;
-        console.log("complete forgot password")
 
         await sendSMS(phoneNo, templateId, messageTemplate, [otp]);
         return { phoneNo, otp }
@@ -107,10 +104,7 @@ exports.updateInchargePassword = async (req, res) => {
         console.log(incharge)
 
         if (!incharge) return res.json({ message: 'Incharge not found' });
-        console.log({
-            isUpdated: true,
-            message: "Password updated successfully",
-        });
+
         res.status(200).json({ isUpdated: true, message: 'Password updated successfully' });
     } catch (error) {
         res.json({ isUpdated: false, message: error.message });

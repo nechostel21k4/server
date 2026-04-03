@@ -31,7 +31,6 @@ exports.createComplaint = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error creating complaint:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -61,7 +60,6 @@ exports.getComplaints = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching complaints:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -89,7 +87,6 @@ exports.getRoomComplaints = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching room complaints:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -122,7 +119,6 @@ exports.updateComplaintStatus = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error updating complaint status:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -143,7 +139,6 @@ exports.deleteComplaint = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error deleting complaint:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

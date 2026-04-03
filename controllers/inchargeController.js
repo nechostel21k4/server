@@ -48,14 +48,14 @@ exports.createIncharge = async (req, res) => {
 exports.verifyIncharge = async (req,res) =>{
 
     try {
-        // console.log(req.params.eid)
+
         // Check if the Incharge exists
         const incharge = await Incharge.findOne({ eid: req.params.eid });
 
         if (!incharge) {
             return res.json({ isExist:false,message: `Incharge with eid ${req.params.eid} not found.` });
         }
-        // console.log(incharge)
+
         const {phoneNo,otp} = await forgotPassword(incharge);
 
         res.status(200).json({ isExist:true,phoneNo, message: 'Forgot password process initiated. OTP sent.' });
@@ -94,7 +94,7 @@ exports.getInchargesByHostelId = async (req, res) => {
 
         res.status(200).json({ incharges });
     } catch (error) {
-        // console.error('Error fetching incharges:', error);
+
         res.status(500).json({ message: 'Server error' });
     }
 };

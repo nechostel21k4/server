@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const bodyParser = require("body-parser");
+
 const connectDB = require("./config/db");
 
 // Import routes
@@ -17,6 +17,7 @@ const complaintRoutes = require("./routes/complaintRoutes");
 
 const inchargeRoutes = require("./routes/inchargeRoutes");
 const InchargeLoginRoutes = require("./routes/inchargeLoginRoutes");
+const feesReminderRoutes = require("./routes/feesReminderRoutes");
 
 const logsRoutes = require("./routes/logsRoutes");
 const facultyRoutes = require("./routes/facultyRoutes");
@@ -46,8 +47,7 @@ connectDB();
 // Middleware
 app.use(express.json());
 app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false }));
 app.use("/uploads", express.static("uploads"));
 
 // Routes
@@ -61,6 +61,7 @@ app.use("/student", hostelerRoutes);
 app.use("/student-auth", hostlerCredentialsRoutes);
 app.use("/requests", requestsRoutes);
 app.use("/holiday", holidayRoutes);
+app.use("/fees", feesReminderRoutes);
 app.use("/complaint", complaintRoutes);
 
 
@@ -85,6 +86,11 @@ app.use((err, req, res, next) => {
 });
 app.get("/", (req, res) => {
   res.send("hello world");
+});
+
+// Keep-alive ping endpoint - hits this to prevent cold starts
+app.get("/ping", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 const PORT = process.env.PORT || 5000;

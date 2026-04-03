@@ -9,7 +9,7 @@ exports.bulkUpdateStudentNames = async (req, res) => {
             $or: [{ nameTelugu: { $exists: false } }, { nameTelugu: '' }, { nameTelugu: null }]
         });
 
-        console.log(`Found ${studentsToUpdate.length} students to update.`);
+
 
         let updatedCount = 0;
         let failedCount = 0;
@@ -27,13 +27,12 @@ exports.bulkUpdateStudentNames = async (req, res) => {
                     await student.save();
                     updatedCount++;
                 } else {
-                    console.log(`Skipping ${student.name} -> ${teluguName}`)
                     failedCount++;
                 }
             });
 
             await Promise.all(updatePromises);
-            console.log(`Processed ${Math.min(i + CHUNK_SIZE, studentsToUpdate.length)}/${studentsToUpdate.length}`);
+
 
             // Small delay to be nice to the API
             await new Promise(resolve => setTimeout(resolve, 200));
@@ -48,7 +47,6 @@ exports.bulkUpdateStudentNames = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error in bulkUpdateStudentNames:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -77,7 +75,6 @@ exports.updateStudentName = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error in updateStudentName:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 }

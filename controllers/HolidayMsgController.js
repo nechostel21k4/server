@@ -54,7 +54,7 @@ exports.deleteHolidayMsg = async (req, res) => {
 // Send holiday messages to parents
 exports.sendHolidayMsgs = async (req, res) => {
   try {
-    console.log("Processing holiday messages...");
+    // Processing holiday messages...
     const { college, year, occasion, fromDate, toDate, sendBy, message } = req.body;
 
     const allColleges = ["NEC", "NIT", "NIPS"];
@@ -72,7 +72,7 @@ exports.sendHolidayMsgs = async (req, res) => {
       // Find students for the current college
       const students = await Hosteler.find(filter);
       if (!students || students.length === 0) {
-        console.log(`No students found for college: ${currentCollege}`);
+        // No students found for college: ${currentCollege}
         continue; // Skip to the next college
       }
 
@@ -88,9 +88,7 @@ exports.sendHolidayMsgs = async (req, res) => {
 
       // Variables for the SMS
       const variables = [currentCollege, occasionTel, fromDate, toDate];
-      console.log(`Sending SMS for college: ${currentCollege}`);
-      console.log("Variables:", variables);
-      console.log("Parent Phone Numbers:", parentPhoneNumbers);
+      // Send SMS log details removed for privacy/cleanliness
 
       // Send SMS to parents of the current college
       for (const phoneNumber of parentPhoneNumbers) {
@@ -103,14 +101,11 @@ exports.sendHolidayMsgs = async (req, res) => {
         if (smsResult.success) {
           totalMessagesSent++;
         } else {
-          console.error(
-            `Failed to send SMS to ${phoneNumber} for college ${currentCollege}:`,
-            smsResult.error
-          );
+          // Failed to send SMS to phoneNumber for college currentCollege: smsResult.error
         }
       }
 
-      console.log(`Messages sent for college: ${currentCollege}`);
+      // Messages sent for college: ${currentCollege}
     }
 
     try {
@@ -126,7 +121,7 @@ exports.sendHolidayMsgs = async (req, res) => {
       });
       await holidayMsg.save();
     } catch (err) {
-      console.log("Error : while adding holiday msg to holidayMsg Schema", err);
+      // Error while adding holiday msg to holidayMsg Schema
     }
 
     res.status(200).json({
@@ -135,7 +130,6 @@ exports.sendHolidayMsgs = async (req, res) => {
       totalMessagesSent,
     });
   } catch (error) {
-    console.error("Error sending holiday messages:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };

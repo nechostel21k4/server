@@ -237,7 +237,7 @@ exports.getFilteredHostlers = async (req, res) => {
     if (year && year.toUpperCase() !== "ALL") filter.year = parseInt(year);
     if (branch && branch.toUpperCase() !== "ALL") filter.branch = branch;
 
-    // console.log(filter);
+
 
     const hostlers = await Hosteler.find(filter);
 
@@ -270,7 +270,6 @@ exports.getFilteredHostlers = async (req, res) => {
       images: imageData, // Separate array for images
     });
   } catch (error) {
-    console.error("Error fetching filtered hostlers:", error);
     res.status(500).json({ message: "Server error. Please try again later." });
   }
 };
@@ -313,9 +312,7 @@ exports.getHostelersByHostelId = async (req, res) => {
   try {
     const { hostelId } = req.params;
     const hostelers = await Hosteler.find({ hostelId });
-    // if (!hostelers.length) {
-    //     return res.status(404).json({ message: 'No hostlers found for this hostelId' });
-    // }
+
     res.status(200).json(hostelers);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -574,7 +571,6 @@ exports.updateFilteredHostlers = async (req, res) => {
       message: `${updateResult.modifiedCount} students year updated to ${year} year.`,
     });
   } catch (error) {
-    console.error("Error updating hostelers by roll numbers:", error);
     res.status(500).json({
       isUpdated: false,
       message: "Server error. Please try again later.",
@@ -588,7 +584,7 @@ const { deleteHostler } = require("./hostlerCredentialsController");
 // Delete a hosteler by RollNo
 exports.deleteHostelerByRollNo = async (req, res) => {
   try {
-    // console.log(req.params.RollNo)
+
     const rollNo = req.params.RollNo;
     const deleteRequestsResult = await Request.deleteMany({ rollNo: rollNo });
 
@@ -623,7 +619,7 @@ exports.deleteFilteredHostlers = async (req, res) => {
         message: "A valid list of roll numbers is required",
       });
     }
-    // console.log("Roll numbers for deletion:", rollNumbers);
+
 
     // Find all hostelers matching the roll numbers
     const hostelersToDelete = await Hosteler.find({
@@ -640,15 +636,13 @@ exports.deleteFilteredHostlers = async (req, res) => {
     // Loop through each hosteler and delete associated data
     for (const hosteler of hostelersToDelete) {
       const rollNo = hosteler.rollNo;
-      // console.log(`Deleting hosteler with roll number: ${rollNo}`);
+
 
       const deleteRequestsResult = await Request.deleteMany({ rollNo });
 
       // Delete hosteler credentials
       const deleteStudentLogin = await deleteHostler({ params: { rollNo } });
-      // console.log(`Deleted credentials for hosteler with rollNo: ${rollNo}`);
       await Hosteler.findOneAndDelete({ rollNo });
-      // console.log(`Deleted hosteler with rollNo: ${rollNo}`);
     }
 
     res.status(200).json({
@@ -656,7 +650,6 @@ exports.deleteFilteredHostlers = async (req, res) => {
       message: `${hostelersToDelete.length} students deleted.`,
     });
   } catch (error) {
-    console.error("Error deleting filtered hostelers:", error);
     res.status(500).json({
       isDeleted: false,
       message: "Server error. Please try again later.",

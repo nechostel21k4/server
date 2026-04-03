@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const AdminLogin = require('../models/AdminLogin');
 const generateOTP = require("../utils/generateOTP");
@@ -36,7 +36,7 @@ exports.deleteAdmin = async (eid) => {
         return { deleted: true, message: "Incharge deleted successfully" };
 
     } catch (error) {
-        res.status(500).json({ deleted: false, message: error.message });
+        return { deleted: false, message: error.message };
     }
 };
 
@@ -53,9 +53,7 @@ exports.login = async (req, res) => {
         // const payload = ;
         const token = jwt.sign({ id: admin._id, eid: admin.eid }, process.env.JWT_SECRET, { expiresIn: '1h' });
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            // console.log(decoded)
-            // res.status(200).json({ success: true, decoded });
+            // token verified
         } catch (error) {
             res.status(401).json({ success: false, message: 'Invalid token' });
         }
