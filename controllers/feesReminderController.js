@@ -62,7 +62,8 @@ exports.sendFeesReminders = async (req, res) => {
         // Select template and variables based on templateType
         let templateId = FEES_TEMPLATE_ID;
         let templateMsg = FEES_MSG_TEMPLATE;
-        let variables = [genderWord, year === "ALL" ? "ALL" : `${year} Year`, feeAmountNonAC, feeAmountAC];
+        // Prioritize customYearText (e.g. "2022-26") over technical 'year' filter (e.g. "ALL" or "1")
+        let variables = [genderWord, customYearText || (year === "ALL" ? "ALL" : `${year} Year`), feeAmountNonAC, feeAmountAC];
 
         if (templateType === "SAME_AS_LAST_YEAR") {
           templateId = FEES_SAME_TEMPLATE_ID;
@@ -109,7 +110,9 @@ exports.sendFeesReminders = async (req, res) => {
         feeAmount: `Non-AC: ${feeAmountNonAC}, AC: ${feeAmountAC}`,
         sendBy,
         msgCount: totalMessagesSent,
-        message: message
+        message: message,
+        templateType,
+        customYearText
       });
       await logEntry.save();
     } catch (err) {
