@@ -39,22 +39,19 @@ exports.sendFeesReminders = async (req, res) => {
     const { college, year, feeAmountNonAC, feeAmountAC, sendBy, message, templateType, customYearText } = req.body;
 
     const allColleges = ["NEC", "NIT", "NIPS"];
-    const collegesToProcess = (!college || college === "ALL") ? allColleges : [college];
+    const collegesToProcess = (college.includes("ALL")) ? allColleges : college;
 
     let totalMessagesSent = 0;
 
-    for (const currentCollege of collegesToProcess) {
-      const filter = { college: currentCollege };
-      if (year !== "ALL") {
-        filter.year = year;
-      }
+    const filter = { college: { $in: collegesToProcess } };
+    if (!year.includes("ALL")) {
+      filter.year = { $in: year };
+    }
 
-      // Find students for the current filter
-      const students = await Hosteler.find(filter);
-      if (!students || students.length === 0) {
-        continue;
-      }
-
+    // Find students for the combined filter
+    const students = await Hosteler.find(filter);
+    
+    if (students && students.length > 0) {
       // Send SMS to parents per student to handle gender-specific word
       for (const student of students) {
         const genderWord = student.gender?.toUpperCase() === "MALE" ? "మీ అబ్బాయి" : "మీ అమ్మాయి";
@@ -62,13 +59,14 @@ exports.sendFeesReminders = async (req, res) => {
         // Select template and variables based on templateType
         let templateId = FEES_TEMPLATE_ID;
         let templateMsg = FEES_MSG_TEMPLATE;
-        // Prioritize customYearText (e.g. "2022-26") over technical 'year' filter (e.g. "ALL" or "1")
-        let variables = [genderWord, customYearText || (year === "ALL" ? "ALL" : `${year} Year`), feeAmountNonAC, feeAmountAC];
+        
+        // Prioritize customYearText
+        let variables = [genderWord, customYearText || "ALL", feeAmountNonAC, feeAmountAC];
 
         if (templateType === "SAME_AS_LAST_YEAR") {
           templateId = FEES_SAME_TEMPLATE_ID;
           templateMsg = FEES_SAME_MSG_TEMPLATE;
-          variables = [genderWord, customYearText || (year === "ALL" ? "ALL" : `${year} Year`)];
+          variables = [genderWord, customYearText || "ALL"];
         }
 
         const smsResult = await sendFeesSMS(
@@ -81,11 +79,10 @@ exports.sendFeesReminders = async (req, res) => {
         if (smsResult.success) {
           totalMessagesSent++;
         } else if (smsResult.message.includes("Insufficient Balance")) {
-          // If balance is out, stop immediately and inform user
           return res.status(200).json({
             success: false,
             message: "SMS API Error: " + smsResult.message + ". Please top up your credits.",
-            totalMessagesSent: 0,
+            totalMessagesSent,
           });
         }
       }

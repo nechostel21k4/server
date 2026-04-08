@@ -4,8 +4,8 @@ const mongoose = require('mongoose');
 const FeesReminderSchema = new mongoose.Schema(
   {
     sendBy: { type: String, required: true },
-    college: { type: String, required: true },
-    year: { type: String, required: true }, 
+    college: { type: [String], required: true },
+    year: { type: [String], required: true }, 
     feeAmountNonAC: { type: String },
     feeAmountAC: { type: String },
     feeAmount: { type: String }, // For convenience/summary
