@@ -25,4 +25,9 @@ router.get('/analytics/day', authenticateUser, isIncharge, analyticsController.g
 router.get('/analytics/week', authenticateUser, isIncharge, analyticsController.getWeeklyAnalytics);
 router.get('/analytics/month', authenticateUser, isIncharge, analyticsController.getMonthlyAnalytics);
 
+// --- MEAL TIMINGS ---
+router.get('/timings', authenticateUser, mealController.getMealTimings);
+router.post('/timings', authenticateUser, isIncharge, mealController.updateMealTimings);
+router.get('/active-meal', authenticateUser, mealController.getActiveMeal);
+
 module.exports = router;
