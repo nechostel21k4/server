@@ -90,7 +90,22 @@ exports.scanMeal = async (req, res) => {
         const { qrToken } = req.body;
         let decoded = jwt.verify(qrToken, process.env.JWT_SECRET);
         const { date, mealType, dayOfWeek, foodName } = decoded;
-        if (date !== moment().format('YYYY-MM-DD')) return res.status(403).json({ success: false, message: "This QR is not for today" });
+
+        // 1. Time Check
+        if (date !== moment().format('YYYY-MM-DD')) {
+            return res.status(403).json({ success: false, message: "This QR is not for today" });
+        }
+
+        // 2. Strict Menu Verification (Fix for cross-app/wrong-db scanning)
+        // Ensure the foodName in the QR matches what is currently set in THIS database's template
+        const currentTemplate = await WeeklyMenuTemplate.findOne({ dayOfWeek: moment().format('dddd'), mealType });
+        
+        if (!currentTemplate || currentTemplate.foodName !== foodName) {
+            return res.status(403).json({ 
+                success: false, 
+                message: "Invalid Menu Source: This QR does not match the current menu for this hostel." 
+            });
+        }
 
         const consumption = new MealConsumption({
             studentId: req.user.id,
