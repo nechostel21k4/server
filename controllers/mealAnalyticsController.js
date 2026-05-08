@@ -41,8 +41,20 @@ exports.getWeeklyAnalytics = async (req, res) => {
                         { 
                             $group: { 
                                 _id: { 
-                                    hostelId: { $ifNull: ["$hostelId", "Legacy"] }, 
-                                    college: { $ifNull: ["$college", "System"] } 
+                                    hostelId: { 
+                                        $cond: {
+                                            if: { $in: ["$hostelId", ["N/A", "Legacy", null]] },
+                                            then: "Main",
+                                            else: { $ifNull: ["$hostelId", "Main"] }
+                                        }
+                                    }, 
+                                    college: { 
+                                        $cond: {
+                                            if: { $in: ["$college", ["N/A", "System", null]] },
+                                            then: "HostelX",
+                                            else: { $ifNull: ["$college", "HostelX"] }
+                                        }
+                                    } 
                                 }, 
                                 count: { $sum: 1 } 
                             } 
@@ -160,8 +172,20 @@ exports.getMonthlyAnalytics = async (req, res) => {
                         { 
                             $group: { 
                                 _id: { 
-                                    hostelId: { $ifNull: ["$hostelId", "Legacy"] }, 
-                                    college: { $ifNull: ["$college", "System"] } 
+                                    hostelId: { 
+                                        $cond: {
+                                            if: { $in: ["$hostelId", ["N/A", "Legacy", null]] },
+                                            then: "Main",
+                                            else: { $ifNull: ["$hostelId", "Main"] }
+                                        }
+                                    }, 
+                                    college: { 
+                                        $cond: {
+                                            if: { $in: ["$college", ["N/A", "System", null]] },
+                                            then: "HostelX",
+                                            else: { $ifNull: ["$college", "HostelX"] }
+                                        }
+                                    } 
                                 }, 
                                 count: { $sum: 1 } 
                             } 
@@ -254,8 +278,20 @@ exports.getDailyAnalytics = async (req, res) => {
                         { 
                             $group: { 
                                 _id: { 
-                                    hostelId: { $ifNull: ["$hostelId", "Legacy"] }, 
-                                    college: { $ifNull: ["$college", "System"] } 
+                                    hostelId: { 
+                                        $cond: {
+                                            if: { $in: ["$hostelId", ["N/A", "Legacy", null]] },
+                                            then: "Main",
+                                            else: { $ifNull: ["$hostelId", "Main"] }
+                                        }
+                                    }, 
+                                    college: { 
+                                        $cond: {
+                                            if: { $in: ["$college", ["N/A", "System", null]] },
+                                            then: "HostelX",
+                                            else: { $ifNull: ["$college", "HostelX"] }
+                                        }
+                                    } 
                                 }, 
                                 count: { $sum: 1 } 
                             } 

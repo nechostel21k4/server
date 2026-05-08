@@ -103,15 +103,17 @@ exports.scanMeal = async (req, res) => {
             return res.status(403).json({ success: false, message: "Invalid Menu Source: This QR does not match the current menu for this hostel." });
         }
 
-        // 3. Fetch Student Entity Info
-        const student = await Hosteler.findById(req.user.id);
+        // 3. Fetch Student Entity Info (Ensure we have the latest hostel mapping)
+        const student = await Hosteler.findById(req.user.id).select('hostelId college').lean();
 
         const consumption = new MealConsumption({
             studentId: req.user.id,
             date: new Date(date),
-            dayOfWeek, mealType, foodName,
-            hostelId: student?.hostelId || 'N/A',
-            college: student?.college || 'N/A',
+            dayOfWeek, 
+            mealType, 
+            foodName,
+            hostelId: student?.hostelId || 'Main',
+            college: student?.college || 'HostelX',
             scannedAt: new Date()
         });
         await consumption.save();
