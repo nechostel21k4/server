@@ -103,11 +103,15 @@ exports.scanMeal = async (req, res) => {
             return res.status(403).json({ success: false, message: "Invalid Menu Source: This QR does not match the current menu for this hostel." });
         }
 
-        // 3. Fetch Student Entity Info (Ensure we have the latest hostel mapping)
-        const student = await Hosteler.findById(req.user.id).select('hostelId college').lean();
+        // 3. Fetch Student Entity Info (Link credentials with Profile)
+        const student = await Hosteler.findOne({ rollNo: req.user.rollNo }).select('_id hostelId college').lean();
+
+        if (!student) {
+            console.error(`[Scan Error] No Hosteler profile found for RollNo: ${req.user.rollNo}`);
+        }
 
         const consumption = new MealConsumption({
-            studentId: req.user.id,
+            studentId: student?._id || req.user.id, // Save correct profile ref
             date: new Date(date),
             dayOfWeek, 
             mealType, 
@@ -129,8 +133,13 @@ exports.getTodayStatus = async (req, res) => {
     try {
         const today = moment().startOf('day').toDate();
         const tomorrow = moment().endOf('day').toDate();
+
+        // Must match the ID type saved in scanMeal (Hosteler ID)
+        const student = await Hosteler.findOne({ rollNo: req.user.rollNo }).select('_id').lean();
+        const targetId = student?._id || req.user.id;
+
         const consumed = await MealConsumption.find({
-            studentId: req.user.id,
+            studentId: targetId,
             date: { $gte: today, $lte: tomorrow }
         });
         res.status(200).json({ success: true, consumed });
