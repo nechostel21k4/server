@@ -84,15 +84,17 @@ app.use((req, res, next) => {
 });
 
 // 2. Middleware
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight requests explicitly for all routes
+
 app.use(apiLimiter);
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable Helmet's CSP as it's often too restrictive for APIs and we have one in vercel.json
+  contentSecurityPolicy: false,
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 }));
 
-app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" })); // Allow images from other origins
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 app.use(express.json({ limit: '5mb' }));
-app.use(cors(corsOptions));
 app.use(express.urlencoded({ extended: false, limit: '5mb' }));
 app.use("/uploads", express.static("uploads"));
 
