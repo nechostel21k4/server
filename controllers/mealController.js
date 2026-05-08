@@ -145,18 +145,26 @@ exports.getAnalytics = async (req, res) => {
         const dayWiseConsumption = await MealConsumption.aggregate([{ $group: { _id: "$dayOfWeek", count: { $sum: 1 } } }]);
         const mealTypeDistribution = await MealConsumption.aggregate([{ $group: { _id: "$mealType", count: { $sum: 1 } } }]);
         
-        // NEW: Entity-wise Consumption (How many from each hostel/college)
+        // Handle Legacy Data: Use 'Legacy' or 'Unassigned' if hostelId is missing
         const entityWiseConsumption = await MealConsumption.aggregate([
-            { $group: { _id: { hostelId: "$hostelId", college: "$college" }, count: { $sum: 1 } } },
+            { 
+                $group: { 
+                    _id: { 
+                        hostelId: { $ifNull: ["$hostelId", "Legacy"] }, 
+                        college: { $ifNull: ["$college", "System"] } 
+                    }, 
+                    count: { $sum: 1 } 
+                } 
+            },
             { $project: { hostelId: "$_id.hostelId", college: "$_id.college", count: 1, _id: 0 } },
             { $sort: { count: -1 } }
         ]);
 
-        // NEW: Student Status Analytics (Who is in hostel vs on leave)
+        // Student Status Analytics
         const studentStatusAnalytics = await Hosteler.aggregate([
             {
                 $group: {
-                    _id: "$hostelId",
+                    _id: { $ifNull: ["$hostelId", "Unassigned"] },
                     total: { $sum: 1 },
                     onLeave: { $sum: { $cond: [{ $eq: ["$currentStatus", "LEAVE"] }, 1, 0] } },
                     present: { $sum: { $cond: [{ $ne: ["$currentStatus", "LEAVE"] }, 1, 0] } }
