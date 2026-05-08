@@ -3,8 +3,8 @@ const MealConsumption = require('../models/MealConsumption');
 const FoodItem = require('../models/FoodItem');
 const Hosteler = require('../models/Hostelers');
 const MealTiming = require('../models/MealTiming');
+const moment = require('moment-timezone');
 const jwt = require('jsonwebtoken');
-const moment = require('moment');
 
 // INCHARGE: Create or Update Weekly Template
 exports.updateTemplate = async (req, res) => {
@@ -103,16 +103,16 @@ exports.generateMealQR = async (req, res) => {
         if (!['breakfast', 'lunch', 'snacks', 'dinner'].includes(mealType)) {
             return res.status(400).json({ success: false, message: "Invalid meal type" });
         }
-        const today = moment().format('YYYY-MM-DD');
+        const today = moment().tz('Asia/Kolkata').format('YYYY-MM-DD');
         const menu = await WeeklyMenuTemplate.findOne({ 
-            dayOfWeek: moment().format('dddd'), 
+            dayOfWeek: moment().tz('Asia/Kolkata').format('dddd'), 
             mealType, 
             $or: [{ hostelId: targetHostel }, { hostelId: { $exists: false } }] 
         });
         if (!menu) return res.status(404).json({ success: false, message: "Menu not set for this hostel today" });
         
-        const midnight = moment().endOf('day').unix();
-        const payload = { date: today, mealType, dayOfWeek: moment().format('dddd'), foodName: menu.foodName, hostelId: targetHostel, exp: midnight };
+        const midnight = moment().tz('Asia/Kolkata').endOf('day').unix();
+        const payload = { date: today, mealType, dayOfWeek: moment().tz('Asia/Kolkata').format('dddd'), foodName: menu.foodName, hostelId: targetHostel, exp: midnight };
         const qrToken = jwt.sign(payload, process.env.JWT_SECRET);
         res.status(200).json({ success: true, qrToken, payload });
     } catch (error) {
@@ -128,13 +128,13 @@ exports.scanMeal = async (req, res) => {
         const { date, mealType, dayOfWeek, foodName, hostelId: qrHostelId } = decoded;
 
         // 1. Time Check
-        if (date !== moment().format('YYYY-MM-DD')) {
+        if (date !== moment().tz('Asia/Kolkata').format('YYYY-MM-DD')) {
             return res.status(403).json({ success: false, message: "This QR is not for today" });
         }
 
         // 2. Strict Menu Verification
         const currentTemplate = await WeeklyMenuTemplate.findOne({ 
-            dayOfWeek: moment().format('dddd'), 
+            dayOfWeek: moment().tz('Asia/Kolkata').format('dddd'), 
             mealType, 
             $or: [{ hostelId: qrHostelId || 'all' }, { hostelId: { $exists: false } }] 
         });
@@ -145,12 +145,14 @@ exports.scanMeal = async (req, res) => {
         // 3. Time Window Check
         const timing = await MealTiming.findOne({ mealType });
         if (timing) {
-            const now = moment().format('HH:mm');
+            const now = moment().tz('Asia/Kolkata').format('HH:mm');
+            const format12 = (t) => moment(t, 'HH:mm').format('hh:mm A');
+
             if (now < timing.startTime) {
-                return res.status(403).json({ success: false, message: `Too early. ${mealType} starts at ${timing.startTime}` });
+                return res.status(403).json({ success: false, message: `Too early. ${mealType} starts at ${format12(timing.startTime)}` });
             }
             if (now > timing.endTime) {
-                return res.status(403).json({ success: false, message: `Time Over. ${mealType} ended at ${timing.endTime}` });
+                return res.status(403).json({ success: false, message: `Time Over. ${mealType} ended at ${format12(timing.endTime)}` });
             }
         }
 
@@ -297,7 +299,7 @@ exports.updateMealTimings = async (req, res) => {
 // Helper for Student: Get Active Meal based on current time
 exports.getActiveMeal = async (req, res) => {
     try {
-        const now = moment().format('HH:mm');
+        const now = moment().tz('Asia/Kolkata').format('HH:mm');
         const timings = await MealTiming.find();
         
         const active = timings.find(t => {
