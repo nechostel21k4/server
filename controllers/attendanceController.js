@@ -373,22 +373,24 @@ exports.getDailyLeaves = async (req, res) => {
         const endOfDay = new Date(`${date}T23:59:59.999+05:30`);
 
         const query = {
-            status: 'ACCEPTED',
-            // isActive: true, // REMOVED: Breaks historical view. relied on date overlap instead.
+            status: { $in: ["ACCEPTED", "ARRIVED"] },
             $or: [
                 {
-                    type: 'LEAVE',
-                    fromDate: { $lte: endOfDay },
-                    toDate: { $gte: startOfDay }
+                    type: { $regex: /^LEAVE$/i },
+                    "accepted.time": { $lte: endOfDay },
+                    $or: [
+                        { "arrived.time": { $gt: startOfDay } },
+                        { "arrived.time": { $exists: false } }
+                    ]
                 },
                 {
-                    type: 'PERMISSION',
+                    type: { $regex: /^PERMISSION$/i },
                     date: { $gte: startOfDay, $lte: endOfDay }
                 }
             ]
         };
 
-        if (hostelId && hostelId !== 'BOTH') {
+        if (hostelId && hostelId !== 'BOTH' && hostelId !== 'ALL') {
             query.hostelId = hostelId;
         }
 

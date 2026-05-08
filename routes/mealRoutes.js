@@ -21,6 +21,7 @@ router.post('/scan', authenticateUser, isStudent, mealController.scanMeal);
 router.get('/today-status', authenticateUser, isStudent, mealController.getTodayStatus);
 
 // --- ANALYTICS ROUTES (Incharge) ---
+router.get('/analytics/day', authenticateUser, isIncharge, analyticsController.getDailyAnalytics);
 router.get('/analytics/week', authenticateUser, isIncharge, analyticsController.getWeeklyAnalytics);
 router.get('/analytics/month', authenticateUser, isIncharge, analyticsController.getMonthlyAnalytics);
 

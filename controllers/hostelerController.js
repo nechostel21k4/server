@@ -370,23 +370,29 @@ exports.getFilteredHostlers = async (req, res) => {
 //  READ — Counts
 // ─────────────────────────────────────────────
 
-/** Aggregates student counts by currentStatus for a given filter */
+/** Aggregates student counts accurately by cross-referencing valid requests */
 const aggregateStatusCounts = async (matchFilter) => {
-  const [total, statusAgg] = await Promise.all([
-    Hosteler.countDocuments(matchFilter),
-    Hosteler.aggregate([
-      { $match: matchFilter },
-      { $group: { _id: "$currentStatus", count: { $sum: 1 } } },
-    ]),
-  ]);
+    const now = new Date();
+    const [total, leaveCount] = await Promise.all([
+        Hosteler.countDocuments(matchFilter),
+        Request.countDocuments({
+            ...matchFilter,
+            type: { $regex: /^LEAVE$/i },
+            status: { $in: ["ACCEPTED", "ARRIVED"] },
+            "accepted.time": { $lte: now },
+            $or: [
+                { "arrived.time": { $gt: now } },
+                { "arrived.time": { $exists: false } }
+            ]
+        })
+    ]);
 
-  const counts = { total, hostel: 0, permission: 0, leave: 0 };
-  statusAgg.forEach(({ _id, count }) => {
-    if (_id === "HOSTEL") counts.hostel = count;
-    else if (_id === "PERMISSION") counts.permission = count;
-    else if (_id === "LEAVE") counts.leave = count;
-  });
-  return counts;
+    return {
+        total,
+        hostel: Math.max(0, total - leaveCount),
+        leave: leaveCount,
+        permission: 0 
+    };
 };
 
 exports.getHostelerCountsByHostelId = async (req, res) => {

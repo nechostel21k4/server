@@ -1,4 +1,7 @@
 const MealConsumption = require('../models/MealConsumption');
+const Hosteler = require('../models/Hostelers');
+const Attendance = require('../models/Attendance');
+const Request = require('../models/Requests');
 const moment = require('moment');
 
 // Week-wise Analytics
@@ -8,7 +11,7 @@ exports.getWeeklyAnalytics = async (req, res) => {
         const start = moment(startDate).startOf('day').toDate();
         const end = moment(startDate).add(6, 'days').endOf('day').toDate();
 
-        const analytics = await MealConsumption.aggregate([
+        const mealAnalytics = await MealConsumption.aggregate([
             {
                 $match: {
                     date: { $gte: start, $lte: end }
@@ -28,12 +31,70 @@ exports.getWeeklyAnalytics = async (req, res) => {
                         { $group: { _id: "$foodName", count: { $sum: 1 } } },
                         { $sort: { count: -1 } },
                         { $limit: 5 }
+                    ],
+                    foodItemBreakdown: [
+                        { $group: { _id: { name: "$foodName", category: "$mealType" }, count: { $sum: 1 } } },
+                        { $project: { name: "$_id.name", category: "$_id.category", count: 1, _id: 0 } },
+                        { $sort: { count: -1 } }
+                    ],
+                    entityWiseConsumption: [
+                        { 
+                            $group: { 
+                                _id: { 
+                                    hostelId: { $ifNull: ["$hostelId", "Legacy"] }, 
+                                    college: { $ifNull: ["$college", "System"] } 
+                                }, 
+                                count: { $sum: 1 } 
+                            } 
+                        },
+                        { $project: { hostelId: "$_id.hostelId", college: "$_id.college", count: 1, _id: 0 } },
+                        { $sort: { count: -1 } }
                     ]
                 }
             }
         ]);
 
-        res.status(200).json({ success: true, data: analytics[0] });
+        // Accurate Presence Analytics based on Start Date
+        const endOfStart = moment(startDate).add(6, 'days').endOf('day').toDate();
+        
+        // 1. Get total students per hostel
+        const hostelTotals = await Hosteler.aggregate([
+            { $group: { _id: { $ifNull: ["$hostelId", "Unassigned"] }, total: { $sum: 1 } } }
+        ]);
+
+        // 2. Get students on leave during this start date
+        const leavesOnDate = await Request.aggregate([
+            { 
+                $match: { 
+                    type: { $regex: /^LEAVE$/i },
+                    status: { $in: ["ACCEPTED", "ARRIVED"] },
+                    "accepted.time": { $lte: endOfStart },
+                    $or: [
+                        { "arrived.time": { $gt: start } },
+                        { "arrived.time": { $exists: false } }
+                    ]
+                } 
+            },
+            { $group: { _id: "$hostelId", count: { $sum: 1 } } }
+        ]);
+
+        // 3. Merge into studentStatusAnalytics
+        const studentStatusAnalytics = hostelTotals.map(h => {
+            const leaveCount = leavesOnDate.find(l => l._id === h._id)?.count || 0;
+            return {
+                hostelId: h._id,
+                total: h.total,
+                onLeave: leaveCount,
+                present: Math.max(0, h.total - leaveCount)
+            };
+        }).sort((a, b) => a.hostelId.localeCompare(b.hostelId));
+
+        const finalData = {
+            ...mealAnalytics[0],
+            studentStatusAnalytics
+        };
+
+        res.status(200).json({ success: true, data: finalData });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -46,7 +107,7 @@ exports.getMonthlyAnalytics = async (req, res) => {
         const start = moment(`${year}-${month}-01`).startOf('month').toDate();
         const end = moment(`${year}-${month}-01`).endOf('month').toDate();
 
-        const analytics = await MealConsumption.aggregate([
+        const mealAnalytics = await MealConsumption.aggregate([
             {
                 $match: {
                     date: { $gte: start, $lte: end }
@@ -54,8 +115,8 @@ exports.getMonthlyAnalytics = async (req, res) => {
             },
             {
                 $facet: {
-                    overall: [
-                        { $group: { _id: null, total: { $sum: 1 } } }
+                    totalMeals: [
+                        { $group: { _id: null, count: { $sum: 1 } } }
                     ],
                     weeklyBreakdown: [
                         {
@@ -80,12 +141,174 @@ exports.getMonthlyAnalytics = async (req, res) => {
                         { $group: { _id: "$mealType", count: { $sum: 1 } } },
                         { $sort: { count: -1 } },
                         { $limit: 1 }
+                    ],
+                    popularFood: [
+                        { $group: { _id: "$foodName", count: { $sum: 1 } } },
+                        { $sort: { count: -1 } },
+                        { $limit: 5 }
+                    ],
+                    dayWiseConsumption: [
+                        { $group: { _id: "$dayOfWeek", count: { $sum: 1 } } },
+                        { $sort: { count: -1 } }
+                    ],
+                    foodItemBreakdown: [
+                        { $group: { _id: { name: "$foodName", category: "$mealType" }, count: { $sum: 1 } } },
+                        { $project: { name: "$_id.name", category: "$_id.category", count: 1, _id: 0 } },
+                        { $sort: { count: -1 } }
+                    ],
+                    entityWiseConsumption: [
+                        { 
+                            $group: { 
+                                _id: { 
+                                    hostelId: { $ifNull: ["$hostelId", "Legacy"] }, 
+                                    college: { $ifNull: ["$college", "System"] } 
+                                }, 
+                                count: { $sum: 1 } 
+                            } 
+                        },
+                        { $project: { hostelId: "$_id.hostelId", college: "$_id.college", count: 1, _id: 0 } },
+                        { $sort: { count: -1 } }
                     ]
                 }
             }
         ]);
 
-        res.status(200).json({ success: true, data: analytics[0] });
+        // Accurate Presence Analytics based on Start Date (1st of month)
+        // 1. Get total students per hostel
+        const hostelTotals = await Hosteler.aggregate([
+            { $group: { _id: { $ifNull: ["$hostelId", "Unassigned"] }, total: { $sum: 1 } } }
+        ]);
+
+        // 2. Get students on leave during the first of the month
+        const leavesOnDate = await Request.aggregate([
+            { 
+                $match: { 
+                    type: { $regex: /^LEAVE$/i },
+                    status: { $in: ["ACCEPTED", "ARRIVED"] },
+                    "accepted.time": { $lte: end },
+                    $or: [
+                        { "arrived.time": { $gt: start } },
+                        { "arrived.time": { $exists: false } }
+                    ]
+                } 
+            },
+            { $group: { _id: "$hostelId", count: { $sum: 1 } } }
+        ]);
+
+        // 3. Merge into studentStatusAnalytics
+        const studentStatusAnalytics = hostelTotals.map(h => {
+            const leaveCount = leavesOnDate.find(l => l._id === h._id)?.count || 0;
+            return {
+                hostelId: h._id,
+                total: h.total,
+                onLeave: leaveCount,
+                present: Math.max(0, h.total - leaveCount)
+            };
+        }).sort((a, b) => a.hostelId.localeCompare(b.hostelId));
+
+        const finalData = {
+            ...mealAnalytics[0],
+            studentStatusAnalytics
+        };
+
+        res.status(200).json({ success: true, data: finalData });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Day-wise Analytics
+exports.getDailyAnalytics = async (req, res) => {
+    try {
+        const { date } = req.query; // Expects YYYY-MM-DD
+        const start = moment(date).startOf('day').toDate();
+        const end = moment(date).endOf('day').toDate();
+
+        const mealAnalytics = await MealConsumption.aggregate([
+            {
+                $match: {
+                    date: { $gte: start, $lte: end }
+                }
+            },
+            {
+                $facet: {
+                    totalMeals: [{ $count: "count" }],
+                    mealTypeDistribution: [
+                        { $group: { _id: "$mealType", count: { $sum: 1 } } }
+                    ],
+                    dayWiseConsumption: [
+                        { $group: { _id: "$dayOfWeek", count: { $sum: 1 } } },
+                        { $sort: { count: -1 } }
+                    ],
+                    popularFood: [
+                        { $group: { _id: "$foodName", count: { $sum: 1 } } },
+                        { $sort: { count: -1 } },
+                        { $limit: 5 }
+                    ],
+                    foodItemBreakdown: [
+                        { $group: { _id: { name: "$foodName", category: "$mealType" }, count: { $sum: 1 } } },
+                        { $project: { name: "$_id.name", category: "$_id.category", count: 1, _id: 0 } },
+                        { $sort: { count: -1 } }
+                    ],
+                    entityWiseConsumption: [
+                        { 
+                            $group: { 
+                                _id: { 
+                                    hostelId: { $ifNull: ["$hostelId", "Legacy"] }, 
+                                    college: { $ifNull: ["$college", "System"] } 
+                                }, 
+                                count: { $sum: 1 } 
+                            } 
+                        },
+                        { $project: { hostelId: "$_id.hostelId", college: "$_id.college", count: 1, _id: 0 } },
+                        { $sort: { count: -1 } }
+                    ]
+                }
+            }
+        ]);
+
+        // Accurate Presence Analytics based on Date
+        const targetDate = moment(date).startOf('day').toDate();
+        const endOfTargetDate = moment(date).endOf('day').toDate();
+        
+        // 1. Get total students per hostel
+        const hostelTotals = await Hosteler.aggregate([
+            { $group: { _id: { $ifNull: ["$hostelId", "Unassigned"] }, total: { $sum: 1 } } }
+        ]);
+
+        // 2. Get students on leave for this specific date (Matches Active Requests logic)
+        const leavesOnDate = await Request.aggregate([
+            { 
+                $match: { 
+                    type: { $regex: /^LEAVE$/i },
+                    status: { $in: ["ACCEPTED", "ARRIVED"] }, // Must be a validated leave
+                    "accepted.time": { $lte: endOfTargetDate },
+                    $or: [
+                        { "arrived.time": { $gt: targetDate } },
+                        { "arrived.time": { $exists: false } }
+                    ]
+                } 
+            },
+            { $group: { _id: "$hostelId", count: { $sum: 1 } } }
+        ]);
+
+        // 3. Merge into studentStatusAnalytics
+        const studentStatusAnalytics = hostelTotals.map(h => {
+            const leaveCount = leavesOnDate.find(l => l._id === h._id)?.count || 0;
+            return {
+                hostelId: h._id,
+                total: h.total,
+                onLeave: leaveCount,
+                present: Math.max(0, h.total - leaveCount)
+            };
+        }).sort((a, b) => a.hostelId.localeCompare(b.hostelId));
+
+        const finalData = {
+            ...mealAnalytics[0],
+            studentStatusAnalytics
+        };
+
+        res.status(200).json({ success: true, data: finalData });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

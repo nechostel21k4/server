@@ -20,20 +20,20 @@ exports.getStats = async (req, res) => {
                 { $match: { date: today, hostelId: { $in: HOSTEL_IDS } } },
                 { $group: { _id: '$hostelId', present: { $sum: 1 } } }
             ]),
-            // Count active accepted requests grouped by hostelId + type
+            // Count active leaves grouped by hostelId
             Request.aggregate([
                 {
                     $match: {
-                        hostelId: { $in: HOSTEL_IDS },
-                        status: 'ACCEPTED',
-                        isActive: true,
+                        type: { $regex: /^LEAVE$/i },
+                        status: { $in: ["ACCEPTED", "ARRIVED"] },
+                        "accepted.time": { $lte: now },
                         $or: [
-                            { fromDate: { $lte: now }, toDate: { $gte: now } },
-                            { fromTime: { $lte: now }, toTime: { $gte: now } }
+                            { "arrived.time": { $gt: now } },
+                            { "arrived.time": { $exists: false } }
                         ]
                     }
                 },
-                { $group: { _id: { hostelId: '$hostelId', type: '$type' }, count: { $sum: 1 } } }
+                { $group: { _id: "$hostelId", count: { $sum: 1 } } }
             ])
         ]);
 
@@ -44,19 +44,17 @@ exports.getStats = async (req, res) => {
         const attendanceMap = {};
         attendanceCounts.forEach(({ _id, present }) => { attendanceMap[_id] = present; });
 
-        const leaveMap = {}; // leaveMap[hostelId][type] = count
+        const leaveMap = {}; 
         leaveCounts.forEach(({ _id, count }) => {
-            if (!leaveMap[_id.hostelId]) leaveMap[_id.hostelId] = {};
-            leaveMap[_id.hostelId][_id.type] = count;
+            leaveMap[_id] = count;
         });
 
         const getHostelStats = (hostelId) => {
             const totalStudents = studentMap[hostelId] || 0;
             const present = attendanceMap[hostelId] || 0;
-            const leave = leaveMap[hostelId]?.['LEAVE'] || 0;
-            const pendingLeaves = leaveMap[hostelId]?.['PERMISSION'] || 0;
+            const leave = leaveMap[hostelId] || 0;
             const absent = Math.max(0, totalStudents - present - leave);
-            return { totalStudents, present, absent, leave, pendingLeaves };
+            return { totalStudents, present, absent, leave };
         };
 
         res.status(200).json({
