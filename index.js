@@ -34,16 +34,11 @@ const http = require("http");
 const server = http.createServer(app);
 const { Server } = require("socket.io");
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.replace(/['"]/g, '').split(',').map(origin => origin.trim()) 
-  : [
-      "http://localhost:3000",
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "https://necadminportal.vercel.app",
-      "https://hostelatt.vercel.app",
-      "https://student-att.vercel.app"
-    ];
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .replace(/['"]/g, '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
 
 const corsOptions = {
   origin: function (origin, callback) {
