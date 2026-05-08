@@ -7,15 +7,21 @@ const moment = require('moment');
 // Week-wise Analytics
 exports.getWeeklyAnalytics = async (req, res) => {
     try {
-        const { startDate } = req.query; // Expects YYYY-MM-DD
+        const { startDate, hostelId } = req.query; // Expects YYYY-MM-DD
         const start = moment(startDate).startOf('day').toDate();
         const end = moment(startDate).add(6, 'days').endOf('day').toDate();
 
+        const matchStage = {
+            date: { $gte: start, $lte: end }
+        };
+
+        if (hostelId && hostelId !== 'all') {
+            matchStage.hostelId = hostelId;
+        }
+
         const mealAnalytics = await MealConsumption.aggregate([
             {
-                $match: {
-                    date: { $gte: start, $lte: end }
-                }
+                $match: matchStage
             },
             {
                 $facet: {
@@ -83,8 +89,14 @@ exports.getWeeklyAnalytics = async (req, res) => {
         // Accurate Presence Analytics based on Start Date
         const endOfStart = moment(startDate).add(6, 'days').endOf('day').toDate();
         
+        const presenceMatch = {};
+        if (hostelId && hostelId !== 'all') {
+            presenceMatch.hostelId = hostelId;
+        }
+
         // 1. Get total students per hostel
         const hostelTotals = await Hosteler.aggregate([
+            { $match: presenceMatch },
             { $group: { _id: { $ifNull: ["$hostelId", "Unassigned"] }, total: { $sum: 1 } } }
         ]);
 
@@ -92,6 +104,7 @@ exports.getWeeklyAnalytics = async (req, res) => {
         const leavesOnDate = await Request.aggregate([
             { 
                 $match: { 
+                    ...presenceMatch,
                     type: { $regex: /^LEAVE$/i },
                     status: { $in: ["ACCEPTED", "ARRIVED"] },
                     "accepted.time": { $lte: endOfStart },
@@ -129,15 +142,21 @@ exports.getWeeklyAnalytics = async (req, res) => {
 // Month-wise Analytics
 exports.getMonthlyAnalytics = async (req, res) => {
     try {
-        const { year, month } = req.query; // e.g., 2024, 05
+        const { year, month, hostelId } = req.query; // e.g., 2024, 05
         const start = moment(`${year}-${month}-01`).startOf('month').toDate();
         const end = moment(`${year}-${month}-01`).endOf('month').toDate();
 
+        const matchStage = {
+            date: { $gte: start, $lte: end }
+        };
+
+        if (hostelId && hostelId !== 'all') {
+            matchStage.hostelId = hostelId;
+        }
+
         const mealAnalytics = await MealConsumption.aggregate([
             {
-                $match: {
-                    date: { $gte: start, $lte: end }
-                }
+                $match: matchStage
             },
             {
                 $facet: {
@@ -226,8 +245,14 @@ exports.getMonthlyAnalytics = async (req, res) => {
         ]);
 
         // Accurate Presence Analytics based on Start Date (1st of month)
+        const presenceMatch = {};
+        if (hostelId && hostelId !== 'all') {
+            presenceMatch.hostelId = hostelId;
+        }
+
         // 1. Get total students per hostel
         const hostelTotals = await Hosteler.aggregate([
+            { $match: presenceMatch },
             { $group: { _id: { $ifNull: ["$hostelId", "Unassigned"] }, total: { $sum: 1 } } }
         ]);
 
@@ -235,6 +260,7 @@ exports.getMonthlyAnalytics = async (req, res) => {
         const leavesOnDate = await Request.aggregate([
             { 
                 $match: { 
+                    ...presenceMatch,
                     type: { $regex: /^LEAVE$/i },
                     status: { $in: ["ACCEPTED", "ARRIVED"] },
                     "accepted.time": { $lte: end },
@@ -272,15 +298,21 @@ exports.getMonthlyAnalytics = async (req, res) => {
 // Day-wise Analytics
 exports.getDailyAnalytics = async (req, res) => {
     try {
-        const { date } = req.query; // Expects YYYY-MM-DD
+        const { date, hostelId } = req.query; // Expects YYYY-MM-DD
         const start = moment(date).startOf('day').toDate();
         const end = moment(date).endOf('day').toDate();
 
+        const matchStage = {
+            date: { $gte: start, $lte: end }
+        };
+
+        if (hostelId && hostelId !== 'all') {
+            matchStage.hostelId = hostelId;
+        }
+
         const mealAnalytics = await MealConsumption.aggregate([
             {
-                $match: {
-                    date: { $gte: start, $lte: end }
-                }
+                $match: matchStage
             },
             {
                 $facet: {
@@ -350,7 +382,13 @@ exports.getDailyAnalytics = async (req, res) => {
         const endOfTargetDate = moment(date).endOf('day').toDate();
         
         // 1. Get total students per hostel
+        const presenceMatch = {};
+        if (hostelId && hostelId !== 'all') {
+            presenceMatch.hostelId = hostelId;
+        }
+
         const hostelTotals = await Hosteler.aggregate([
+            { $match: presenceMatch },
             { $group: { _id: { $ifNull: ["$hostelId", "Unassigned"] }, total: { $sum: 1 } } }
         ]);
 
@@ -358,6 +396,7 @@ exports.getDailyAnalytics = async (req, res) => {
         const leavesOnDate = await Request.aggregate([
             { 
                 $match: { 
+                    ...presenceMatch,
                     type: { $regex: /^LEAVE$/i },
                     status: { $in: ["ACCEPTED", "ARRIVED"] }, // Must be a validated leave
                     "accepted.time": { $lte: endOfTargetDate },

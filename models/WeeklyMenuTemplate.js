@@ -18,9 +18,13 @@ const weeklyMenuTemplateSchema = new mongoose.Schema({
     updatedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Admin'
+    },
+    hostelId: {
+        type: String,
+        default: 'all'
     }
 }, { timestamps: true });
 
-weeklyMenuTemplateSchema.index({ dayOfWeek: 1, mealType: 1 }, { unique: true });
+weeklyMenuTemplateSchema.index({ dayOfWeek: 1, mealType: 1, hostelId: 1 }, { unique: true });
 
 module.exports = mongoose.model('WeeklyMenuTemplate', weeklyMenuTemplateSchema);

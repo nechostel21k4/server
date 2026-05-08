@@ -8,11 +8,12 @@ const moment = require('moment');
 // INCHARGE: Create or Update Weekly Template
 exports.updateTemplate = async (req, res) => {
     try {
-        const { menuItems } = req.body;
+        const { menuItems, hostelId } = req.body;
+        const targetHostel = hostelId || 'all';
         const bulkOps = menuItems.map(item => ({
             updateOne: {
-                filter: { dayOfWeek: item.dayOfWeek, mealType: item.mealType },
-                update: { foodName: item.foodName, updatedBy: req.user.id },
+                filter: { dayOfWeek: item.dayOfWeek, mealType: item.mealType, hostelId: targetHostel },
+                update: { foodName: item.foodName, updatedBy: req.user.id, hostelId: targetHostel },
                 upsert: true
             }
         }));
@@ -26,7 +27,9 @@ exports.updateTemplate = async (req, res) => {
 // GET: Fetch the current weekly template
 exports.getTemplate = async (req, res) => {
     try {
-        const template = await WeeklyMenuTemplate.find();
+        const { hostelId } = req.query;
+        const filter = hostelId ? { hostelId: { $in: [hostelId, 'all'] } } : {};
+        const template = await WeeklyMenuTemplate.find(filter);
         res.status(200).json({ success: true, data: template });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -36,7 +39,9 @@ exports.getTemplate = async (req, res) => {
 // INCHARGE: Manage Food Items Library
 exports.getFoodItems = async (req, res) => {
     try {
-        let items = await FoodItem.find().sort({ name: 1 });
+        const { hostelId } = req.query;
+        const filter = hostelId ? { hostelId: { $in: [hostelId, 'all'] } } : {};
+        let items = await FoodItem.find(filter).sort({ name: 1 });
         
         res.status(200).json({ success: true, data: items });
     } catch (error) {
@@ -46,8 +51,9 @@ exports.getFoodItems = async (req, res) => {
 
 exports.addFoodItem = async (req, res) => {
     try {
-        const { name, category } = req.body;
-        const newItem = new FoodItem({ name, category });
+        const { name, category, hostelId } = req.body;
+        const targetHostel = hostelId || 'all';
+        const newItem = new FoodItem({ name, category, hostelId: targetHostel });
         await newItem.save();
         res.status(201).json({ success: true, data: newItem });
     } catch (error) {
@@ -68,16 +74,17 @@ exports.deleteFoodItem = async (req, res) => {
 // INCHARGE: Generate Today's QR
 exports.generateMealQR = async (req, res) => {
     try {
-        const { mealType } = req.query;
+        const { mealType, hostelId } = req.query;
+        const targetHostel = hostelId || 'all';
         if (!['breakfast', 'lunch', 'snacks', 'dinner'].includes(mealType)) {
             return res.status(400).json({ success: false, message: "Invalid meal type" });
         }
         const today = moment().format('YYYY-MM-DD');
-        const menu = await WeeklyMenuTemplate.findOne({ dayOfWeek: moment().format('dddd'), mealType });
-        if (!menu) return res.status(404).json({ success: false, message: "Menu not set for today" });
+        const menu = await WeeklyMenuTemplate.findOne({ dayOfWeek: moment().format('dddd'), mealType, hostelId: targetHostel });
+        if (!menu) return res.status(404).json({ success: false, message: "Menu not set for this hostel today" });
         
         const midnight = moment().endOf('day').unix();
-        const payload = { date: today, mealType, dayOfWeek: moment().format('dddd'), foodName: menu.foodName, exp: midnight };
+        const payload = { date: today, mealType, dayOfWeek: moment().format('dddd'), foodName: menu.foodName, hostelId: targetHostel, exp: midnight };
         const qrToken = jwt.sign(payload, process.env.JWT_SECRET);
         res.status(200).json({ success: true, qrToken, payload });
     } catch (error) {
@@ -90,7 +97,7 @@ exports.scanMeal = async (req, res) => {
     try {
         const { qrToken } = req.body;
         let decoded = jwt.verify(qrToken, process.env.JWT_SECRET);
-        const { date, mealType, dayOfWeek, foodName } = decoded;
+        const { date, mealType, dayOfWeek, foodName, hostelId: qrHostelId } = decoded;
 
         // 1. Time Check
         if (date !== moment().format('YYYY-MM-DD')) {
@@ -98,7 +105,7 @@ exports.scanMeal = async (req, res) => {
         }
 
         // 2. Strict Menu Verification
-        const currentTemplate = await WeeklyMenuTemplate.findOne({ dayOfWeek: moment().format('dddd'), mealType });
+        const currentTemplate = await WeeklyMenuTemplate.findOne({ dayOfWeek: moment().format('dddd'), mealType, hostelId: qrHostelId || 'all' });
         if (!currentTemplate || currentTemplate.foodName !== foodName) {
             return res.status(403).json({ success: false, message: "Invalid Menu Source: This QR does not match the current menu for this hostel." });
         }

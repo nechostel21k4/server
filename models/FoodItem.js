@@ -6,10 +6,14 @@ const foodItemSchema = new mongoose.Schema({
         type: String, 
         required: true, 
         enum: ['breakfast', 'lunch', 'snacks', 'dinner'] 
+    },
+    hostelId: {
+        type: String,
+        default: 'all'
     }
 }, { timestamps: true });
 
-// Prevent duplicate items in the same category
-foodItemSchema.index({ name: 1, category: 1 }, { unique: true });
+// Prevent duplicate items in the same category for the same hostel
+foodItemSchema.index({ name: 1, category: 1, hostelId: 1 }, { unique: true });
 
 module.exports = mongoose.model('FoodItem', foodItemSchema);
