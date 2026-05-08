@@ -35,7 +35,14 @@ const { Server } = require("socket.io");
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.replace(/['"]/g, '').split(',').map(origin => origin.trim()) 
-  : [];
+  : [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://necadminportal.vercel.app",
+      "https://hostelatt.vercel.app",
+      "https://student-att.vercel.app"
+    ];
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -47,10 +54,11 @@ const corsOptions = {
       return normalizedAllowed === normalizedOrigin;
     });
 
-    if (isAllowed) {
+    if (isAllowed || !origin) {
       callback(null, true);
     } else {
-      callback(null, false);
+      console.warn(`Origin ${origin} not allowed by CORS`);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true
@@ -77,21 +85,7 @@ app.use((req, res, next) => {
 // 2. Middleware
 app.use(apiLimiter);
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'none'"],
-      scriptSrc: ["'none'"],
-      styleSrc: ["'none'"],
-      imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'none'"],
-      objectSrc: ["'none'"],
-      frameAncestors: ["'none'"],
-      baseUri: ["'none'"],
-      formAction: ["'self'"],
-      upgradeInsecureRequests: [],
-    },
-  },
+  contentSecurityPolicy: false, // Disable Helmet's CSP as it's often too restrictive for APIs and we have one in vercel.json
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 }));
 
