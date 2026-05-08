@@ -37,26 +37,6 @@ exports.getFoodItems = async (req, res) => {
     try {
         let items = await FoodItem.find().sort({ name: 1 });
         
-        // Auto-seed if empty
-        if (items.length === 0) {
-            const defaults = [
-                { name: 'Idli + Vada', category: 'breakfast' },
-                { name: 'Masala Dosa', category: 'breakfast' },
-                { name: 'Puri Cholay', category: 'breakfast' },
-                { name: 'Veg Meals', category: 'lunch' },
-                { name: 'Chicken Biryani', category: 'lunch' },
-                { name: 'Sambar Rice + Fry', category: 'lunch' },
-                { name: 'Samosa', category: 'snacks' },
-                { name: 'Onion Pakora', category: 'snacks' },
-                { name: 'Tea & Coffee', category: 'snacks' },
-                { name: 'Chapathi + Curry', category: 'dinner' },
-                { name: 'Rice & Sambhar', category: 'dinner' },
-                { name: 'Veg Pulao', category: 'dinner' }
-            ];
-            await FoodItem.insertMany(defaults);
-            items = await FoodItem.find().sort({ name: 1 });
-        }
-        
         res.status(200).json({ success: true, data: items });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
