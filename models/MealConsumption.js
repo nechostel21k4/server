@@ -23,6 +23,8 @@ const mealConsumptionSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    hostelId: String, // Tracks the specific hostel
+    college: String,  // Tracks the entity/college name
     scannedAt: {
         type: Date,
         default: Date.now

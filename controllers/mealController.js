@@ -1,6 +1,7 @@
 const WeeklyMenuTemplate = require('../models/WeeklyMenuTemplate');
 const MealConsumption = require('../models/MealConsumption');
 const FoodItem = require('../models/FoodItem');
+const Hosteler = require('../models/Hostelers');
 const jwt = require('jsonwebtoken');
 const moment = require('moment');
 
@@ -96,21 +97,22 @@ exports.scanMeal = async (req, res) => {
             return res.status(403).json({ success: false, message: "This QR is not for today" });
         }
 
-        // 2. Strict Menu Verification (Fix for cross-app/wrong-db scanning)
-        // Ensure the foodName in the QR matches what is currently set in THIS database's template
+        // 2. Strict Menu Verification
         const currentTemplate = await WeeklyMenuTemplate.findOne({ dayOfWeek: moment().format('dddd'), mealType });
-        
         if (!currentTemplate || currentTemplate.foodName !== foodName) {
-            return res.status(403).json({ 
-                success: false, 
-                message: "Invalid Menu Source: This QR does not match the current menu for this hostel." 
-            });
+            return res.status(403).json({ success: false, message: "Invalid Menu Source: This QR does not match the current menu for this hostel." });
         }
+
+        // 3. Fetch Student Entity Info
+        const student = await Hosteler.findById(req.user.id);
 
         const consumption = new MealConsumption({
             studentId: req.user.id,
             date: new Date(date),
-            dayOfWeek, mealType, foodName, scannedAt: new Date()
+            dayOfWeek, mealType, foodName,
+            hostelId: student?.hostelId || 'N/A',
+            college: student?.college || 'N/A',
+            scannedAt: new Date()
         });
         await consumption.save();
         res.status(201).json({ success: true, message: `Enjoy your ${foodName}!` });
@@ -142,7 +144,39 @@ exports.getAnalytics = async (req, res) => {
         const popularFood = await MealConsumption.aggregate([{ $group: { _id: "$foodName", count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 5 }]);
         const dayWiseConsumption = await MealConsumption.aggregate([{ $group: { _id: "$dayOfWeek", count: { $sum: 1 } } }]);
         const mealTypeDistribution = await MealConsumption.aggregate([{ $group: { _id: "$mealType", count: { $sum: 1 } } }]);
-        res.status(200).json({ success: true, data: { totalMeals, popularFood, dayWiseConsumption, mealTypeDistribution } });
+        
+        // NEW: Entity-wise Consumption (How many from each hostel/college)
+        const entityWiseConsumption = await MealConsumption.aggregate([
+            { $group: { _id: { hostelId: "$hostelId", college: "$college" }, count: { $sum: 1 } } },
+            { $project: { hostelId: "$_id.hostelId", college: "$_id.college", count: 1, _id: 0 } },
+            { $sort: { count: -1 } }
+        ]);
+
+        // NEW: Student Status Analytics (Who is in hostel vs on leave)
+        const studentStatusAnalytics = await Hosteler.aggregate([
+            {
+                $group: {
+                    _id: "$hostelId",
+                    total: { $sum: 1 },
+                    onLeave: { $sum: { $cond: [{ $eq: ["$currentStatus", "LEAVE"] }, 1, 0] } },
+                    present: { $sum: { $cond: [{ $ne: ["$currentStatus", "LEAVE"] }, 1, 0] } }
+                }
+            },
+            { $project: { hostelId: "$_id", total: 1, onLeave: 1, present: 1, _id: 0 } },
+            { $sort: { hostelId: 1 } }
+        ]);
+
+        res.status(200).json({ 
+            success: true, 
+            data: { 
+                totalMeals, 
+                popularFood, 
+                dayWiseConsumption, 
+                mealTypeDistribution,
+                entityWiseConsumption,
+                studentStatusAnalytics
+            } 
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
