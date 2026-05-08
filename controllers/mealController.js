@@ -27,10 +27,31 @@ exports.updateTemplate = async (req, res) => {
 // GET: Fetch the current weekly template
 exports.getTemplate = async (req, res) => {
     try {
-        const { hostelId } = req.query;
-        const filter = hostelId ? { hostelId: { $in: [hostelId, 'all'] } } : {};
+        // Food management is global/shared across all hostels
+        const filter = { $or: [{ hostelId: 'all' }, { hostelId: { $exists: false } }] };
         const template = await WeeklyMenuTemplate.find(filter);
         res.status(200).json({ success: true, data: template });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// POST: Update template (Hostel-aware)
+exports.updateTemplate = async (req, res) => {
+    try {
+        const { menuItems } = req.body;
+        const targetHostel = 'all'; // Always save to global template
+
+        const ops = menuItems.map(item => ({
+            updateOne: {
+                filter: { dayOfWeek: item.dayOfWeek, mealType: item.mealType, hostelId: targetHostel },
+                update: { $set: { foodName: item.foodName } },
+                upsert: true
+            }
+        }));
+
+        await WeeklyMenuTemplate.bulkWrite(ops);
+        res.status(200).json({ success: true, message: "Template updated successfully" });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -39,8 +60,8 @@ exports.getTemplate = async (req, res) => {
 // INCHARGE: Manage Food Items Library
 exports.getFoodItems = async (req, res) => {
     try {
-        const { hostelId } = req.query;
-        const filter = hostelId ? { hostelId: { $in: [hostelId, 'all'] } } : {};
+        // Food items are shared across all hostels
+        const filter = { $or: [{ hostelId: 'all' }, { hostelId: { $exists: false } }] };
         let items = await FoodItem.find(filter).sort({ name: 1 });
         
         res.status(200).json({ success: true, data: items });
@@ -51,8 +72,8 @@ exports.getFoodItems = async (req, res) => {
 
 exports.addFoodItem = async (req, res) => {
     try {
-        const { name, category, hostelId } = req.body;
-        const targetHostel = hostelId || 'all';
+        const { name, category } = req.body;
+        const targetHostel = 'all';
         const newItem = new FoodItem({ name, category, hostelId: targetHostel });
         await newItem.save();
         res.status(201).json({ success: true, data: newItem });
@@ -65,17 +86,19 @@ exports.addFoodItem = async (req, res) => {
 exports.deleteFoodItem = async (req, res) => {
     try {
         await FoodItem.findByIdAndDelete(req.params.id);
-        res.status(200).json({ success: true, message: "Item removed from library" });
+        res.status(200).json({ success: true, message: "Item deleted" });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
+
+
 // INCHARGE: Generate Today's QR
 exports.generateMealQR = async (req, res) => {
     try {
-        const { mealType, hostelId } = req.query;
-        const targetHostel = hostelId || 'all';
+        const { mealType } = req.query;
+        const targetHostel = 'all'; // QR uses global menu
         if (!['breakfast', 'lunch', 'snacks', 'dinner'].includes(mealType)) {
             return res.status(400).json({ success: false, message: "Invalid meal type" });
         }
