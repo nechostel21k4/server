@@ -59,7 +59,21 @@ exports.getWeeklyAnalytics = async (req, res) => {
                                 count: { $sum: 1 } 
                             } 
                         },
-                        { $project: { hostelId: "$_id.hostelId", college: "$_id.college", count: 1, _id: 0 } },
+                        {
+                            $lookup: {
+                                from: "hostels",
+                                localField: "_id.hostelId",
+                                foreignField: "code",
+                                as: "hostelInfo"
+                            }
+                        },
+                        { $project: { 
+                            hostelId: "$_id.hostelId", 
+                            college: "$_id.college", 
+                            hostelName: { $ifNull: [{ $arrayElemAt: ["$hostelInfo.name", 0] }, "$_id.hostelId"] },
+                            count: 1, 
+                            _id: 0 
+                        } },
                         { $sort: { count: -1 } }
                     ]
                 }
@@ -190,7 +204,21 @@ exports.getMonthlyAnalytics = async (req, res) => {
                                 count: { $sum: 1 } 
                             } 
                         },
-                        { $project: { hostelId: "$_id.hostelId", college: "$_id.college", count: 1, _id: 0 } },
+                        {
+                            $lookup: {
+                                from: "hostels",
+                                localField: "_id.hostelId",
+                                foreignField: "code",
+                                as: "hostelInfo"
+                            }
+                        },
+                        { $project: { 
+                            hostelId: "$_id.hostelId", 
+                            college: "$_id.college", 
+                            hostelName: { $ifNull: [{ $arrayElemAt: ["$hostelInfo.name", 0] }, "$_id.hostelId"] },
+                            count: 1, 
+                            _id: 0 
+                        } },
                         { $sort: { count: -1 } }
                     ]
                 }
@@ -296,7 +324,21 @@ exports.getDailyAnalytics = async (req, res) => {
                                 count: { $sum: 1 } 
                             } 
                         },
-                        { $project: { hostelId: "$_id.hostelId", college: "$_id.college", count: 1, _id: 0 } },
+                        {
+                            $lookup: {
+                                from: "hostels",
+                                localField: "_id.hostelId",
+                                foreignField: "code",
+                                as: "hostelInfo"
+                            }
+                        },
+                        { $project: { 
+                            hostelId: "$_id.hostelId", 
+                            college: "$_id.college", 
+                            hostelName: { $ifNull: [{ $arrayElemAt: ["$hostelInfo.name", 0] }, "$_id.hostelId"] },
+                            count: 1, 
+                            _id: 0 
+                        } },
                         { $sort: { count: -1 } }
                     ]
                 }
