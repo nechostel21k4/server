@@ -159,10 +159,11 @@ exports.updateHostelSettings = async (req, res) => {
     if (attendanceEndTime) updateFields.attendanceEndTime = attendanceEndTime;
 
     // Geo-Coordinates Update
-    const { latitude, longitude, radius } = req.body;
+    const { latitude, longitude, radius, mapLink } = req.body;
     if (latitude !== undefined) updateFields['geoCoordinates.latitude'] = Number(latitude);
     if (longitude !== undefined) updateFields['geoCoordinates.longitude'] = Number(longitude);
     if (radius !== undefined) updateFields['geoCoordinates.radius'] = Number(radius);
+    if (mapLink !== undefined) updateFields['geoCoordinates.mapLink'] = mapLink;
 
     const updatedHostel = await Hostel.findOneAndUpdate(
       { code: hostelCode },
@@ -184,6 +185,16 @@ exports.updateHostelSettings = async (req, res) => {
 };
 
 // Hostel CRUD
+exports.getHostelByCode = async (req, res) => {
+  try {
+    const { code } = req.params;
+    const hostel = await Hostel.findOne({ code }).select('geoCoordinates attendanceStartTime attendanceEndTime');
+    if (!hostel) return res.status(404).json({ success: false, message: 'Hostel not found' });
+    res.status(200).json({ success: true, hostel });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 exports.getAllHostels = async (req, res) => {
   try {

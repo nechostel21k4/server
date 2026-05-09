@@ -22,6 +22,7 @@ router.get("/addGetHostels", authenticateUser, isAdmin, schemaController.AddandG
 
 router.post("/updateHostelById/:id", authenticateUser, isAdmin, schemaController.updateHostelById)
 router.delete("/deleteHostelById/:id", authenticateUser, isAdmin, schemaController.deleteHostelById)
+router.get("/getHostel/:code", authenticateUser, schemaController.getHostelByCode)
 
 // Hostel IP Configuration
 router.post("/updateHostelIPs", authenticateUser, isAdmin, schemaController.updateHostelIPs)

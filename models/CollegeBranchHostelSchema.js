@@ -13,12 +13,13 @@ const branchSchema = new Schema({
 });
 
 const hostelSchema = new Schema({
-  code: { type: String, default: "" },
+  code: { type: String, default: "", unique: true, index: true },
   name: { type: String, default: "" },
   geoCoordinates: {
     latitude: { type: Number },
     longitude: { type: Number },
-    radius: { type: Number, default: 200 } // in meters
+    radius: { type: Number, default: 200 }, // in meters
+    mapLink: { type: String, default: "" }
   },
   allowedIPs: { type: [String], default: [] }, // Array of allowed IP addresses or patterns
   attendanceStartTime: { type: String, default: "00:00" }, // Format HH:mm

@@ -17,7 +17,7 @@ router.get('/getTodayAcceptedRequests/:hostelId', authenticateUser, isIncharge, 
 router.get('/getTodayArrivedRequests/:hostelId', authenticateUser, isIncharge, requestsController.getTodayArrivedByHostelId)  
 
 
-router.get('/verify/:id', requestsController.verifyRequest);
+router.get('/verify/:id', authenticateUser, isFaculty, requestsController.verifyRequest);
 router.post('/cancel/:Id', authenticateUser, requestsController.CancelRequestById); 
 
 router.get('/:RollNo', authenticateUser, requestsController.getAllRequestsByRollNumber);
