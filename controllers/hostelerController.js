@@ -4,8 +4,13 @@ const Incharge = require("../models/Incharge");
 const Faculty = require("../models/Faculty");
 const Request = require("../models/Requests");
 const { ImageModel } = require("../models/ProfileImage");
+const Attendance = require("../models/Attendance");
+const MealConsumption = require("../models/MealConsumption");
+const Complaint = require("../models/Complaint");
+const Log = require("../models/Logs");
 const { forgotPassword } = require("./hostlerCredentialsController");
 const { deleteHostler } = require("./hostlerCredentialsController");
+const { traceAction } = require("../utils/logger");
 
 // ─────────────────────────────────────────────
 //  SHARED HELPERS
@@ -95,6 +100,10 @@ exports.createHosteler = async (req, res) => {
     }
 
     await Hosteler.create(req.body);
+
+    // Trace Action
+    await traceAction(req, `Established student identity: ${req.body.rollNo} (${req.body.name})`);
+
     return res.status(201).json({ success: true, isExisted: false, message: "Student added successfully." });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Failed to add student.", error: error.message });
@@ -141,7 +150,8 @@ exports.verifyRegisterStudent = async (req, res) => {
       college: hosteler.college,
       branch: hosteler.branch,
       year: hosteler.year,
-      hostelId: hosteler.hostelId
+      hostelId: hosteler.hostelId,
+      email: hosteler.email
     };
 
     return res.status(200).json({ isExist: true, isRegistered: false, hosteler: safeHosteler });
@@ -233,7 +243,7 @@ exports.searchHosteler = async (req, res) => {
       {
         $project: {
           rollNo: 1, name: 1, college: 1, year: 1, branch: 1, hostelId: 1,
-          phoneNo: 1, parentPhoneNo: 1, parentName: 1, roomNo: 1, currentStatus: 1, gender: 1,
+          phoneNo: 1, email: 1, parentPhoneNo: 1, parentName: 1, roomNo: 1, currentStatus: 1, gender: 1,
           isRegistered: {
             $cond: {
               if: { $gt: [{ $size: { $ifNull: [{ $arrayElemAt: ['$creds.faceDescriptor', 0] }, []] } }, 0] },
@@ -338,7 +348,7 @@ exports.getFilteredHostlers = async (req, res) => {
         {
           $project: {
             rollNo: 1, name: 1, college: 1, year: 1, branch: 1, hostelId: 1,
-            roomNo: 1, currentStatus: 1, gender: 1, parentName: 1, parentPhoneNo: 1, phoneNo: 1,
+            roomNo: 1, currentStatus: 1, gender: 1, parentName: 1, parentPhoneNo: 1, phoneNo: 1, email: 1,
             imagePath: { $arrayElemAt: ['$img', 0] }
           }
         }
@@ -538,6 +548,9 @@ exports.updateHostelerByRollNo = async (req, res) => {
 
     if (!hosteler) return res.status(404).json({ message: "Student not found." });
 
+    // Trace Action
+    await traceAction(req, `Modified student record: ${req.params.RollNo}`);
+
     return res.status(200).json({ updated: true, data: hosteler });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -563,6 +576,9 @@ exports.updateFilteredHostlers = async (req, res) => {
     if (result.matchedCount === 0) {
       return res.status(404).json({ isUpdated: false, message: "No matching students found." });
     }
+
+    // Trace Action
+    await traceAction(req, `Bulk updated ${result.modifiedCount} students to Year ${year}`);
 
     return res.status(200).json({
       isUpdated: true,
@@ -622,16 +638,29 @@ exports.deleteHostelerByRollNo = async (req, res) => {
   try {
     const { RollNo } = req.params;
 
-    const hosteler = await Hosteler.findOneAndDelete({ rollNo: RollNo }).lean();
+    // Fetch student first to get the _id for ObjectId-based lookups
+    const hosteler = await Hosteler.findOne({ rollNo: RollNo }).lean();
     if (!hosteler) return res.status(404).json({ deleted: false, message: "Student not found." });
 
-    // Clean up related data in parallel
+    const studentId = hosteler._id;
+
+    // Perform cascading delete of all related data
     await Promise.all([
+      Hosteler.deleteOne({ rollNo: RollNo }),
+      HostlerCredentials.deleteOne({ rollNo: RollNo }),
       Request.deleteMany({ rollNo: RollNo }),
-      deleteHostler({ params: { rollNo: RollNo } }),
+      Attendance.deleteMany({ studentId: RollNo }), // studentId in Attendance is rollNo string
+      MealConsumption.deleteMany({ studentId: studentId }), // studentId in MealConsumption is ObjectId
+      Complaint.deleteMany({ $or: [{ rollNo: RollNo }, { studentId: studentId }] }),
+      Log.deleteMany({ userId: RollNo }),
+      ImageModel.deleteMany({ username: RollNo }),
+      deleteHostler({ params: { rollNo: RollNo } }), // Standard cleanup helper
     ]);
 
-    return res.status(200).json({ deleted: true, message: "Student deleted successfully." });
+    // Trace Action
+    await traceAction(req, `Permanently purged student and all history: ${RollNo}`);
+
+    return res.status(200).json({ deleted: true, message: `Student ${RollNo} and all associated records deleted permanently.` });
   } catch (error) {
     return res.status(500).json({ deleted: false, message: error.message });
   }
@@ -645,21 +674,31 @@ exports.deleteFilteredHostlers = async (req, res) => {
       return res.status(400).json({ isDeleted: false, message: "Provide a non-empty array of roll numbers." });
     }
 
-    const found = await Hosteler.find({ rollNo: { $in: rollNumbers } }).select("rollNo").lean();
-    if (found.length === 0) {
+    const students = await Hosteler.find({ rollNo: { $in: rollNumbers } }).select("_id rollNo").lean();
+    if (students.length === 0) {
       return res.status(404).json({ isDeleted: false, message: "No matching students found." });
     }
 
-    const rollNos = found.map((h) => h.rollNo);
+    const rollNos = students.map((h) => h.rollNo);
+    const objectIds = students.map((h) => h._id);
 
     // Delete all related data in parallel batches
     await Promise.all([
       Hosteler.deleteMany({ rollNo: { $in: rollNos } }),
+      HostlerCredentials.deleteMany({ rollNo: { $in: rollNos } }),
       Request.deleteMany({ rollNo: { $in: rollNos } }),
+      Attendance.deleteMany({ studentId: { $in: rollNos } }),
+      MealConsumption.deleteMany({ studentId: { $in: objectIds } }),
+      Complaint.deleteMany({ $or: [{ rollNo: { $in: rollNos } }, { studentId: { $in: objectIds } }] }),
+      Log.deleteMany({ userId: { $in: rollNos } }),
+      ImageModel.deleteMany({ username: { $in: rollNos } }),
       ...rollNos.map((rollNo) => deleteHostler({ params: { rollNo } })),
     ]);
 
-    return res.status(200).json({ isDeleted: true, message: `${rollNos.length} student(s) deleted.` });
+    // Trace Action
+    await traceAction(req, `Executed bulk purge of ${rollNos.length} students from the registry`);
+
+    return res.status(200).json({ isDeleted: true, message: `${rollNos.length} student(s) and their full history deleted.` });
   } catch (error) {
     return res.status(500).json({ isDeleted: false, message: "Server error. Please try again." });
   }

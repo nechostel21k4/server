@@ -177,6 +177,15 @@ exports.scanMeal = async (req, res) => {
         res.status(201).json({ success: true, message: `Enjoy your ${foodName}!` });
     } catch (error) {
         if (error.code === 11000) return res.status(409).json({ success: false, message: "Meal already consumed" });
+        
+        // Handle JWT Errors gracefully
+        if (error.name === 'TokenExpiredError') {
+            return res.status(403).json({ success: false, message: "QR Code Expired. Ask incharge to refresh QR." });
+        }
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(403).json({ success: false, message: "Invalid or Unknown QR Code." });
+        }
+
         res.status(500).json({ success: false, message: error.message });
     }
 };

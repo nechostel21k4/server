@@ -1,4 +1,5 @@
 const { College, Branch, Hostel } = require("../models/CollegeBranchHostelSchema");
+const { traceAction } = require("../utils/logger");
 
 
 exports.getAllColleges = async (req, res) => {
@@ -35,6 +36,7 @@ exports.updateCollegeById = async (req, res) => {
       return res.status(200).json({ success: false, message: "College not found." });
     }
 
+    await traceAction(req, `Updated College schema: ${updatedCollege.name} (${updatedCollege.code})`);
     res.status(200).json({ success: true, message: "College updated successfully.", college: updatedCollege });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -52,6 +54,7 @@ exports.deleteCollegeById = async (req, res) => {
       return res.status(200).json({ success: false, message: "College not found." });
     }
 
+    await traceAction(req, `Deleted College schema entry: ${deletedCollege.name}`);
     res.status(200).json({ success: true, message: "College deleted successfully." });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -94,6 +97,7 @@ exports.updateBranchById = async (req, res) => {
       return res.status(200).json({ success: false, message: "Branch not found." });
     }
 
+    await traceAction(req, `Updated Branch schema: ${updatedBranch.name} (${updatedBranch.code})`);
     res.status(200).json({ success: true, message: "Branch updated successfully.", branch: updatedBranch });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -111,6 +115,7 @@ exports.deleteBranchById = async (req, res) => {
       return res.status(200).json({ success: false, message: "Branch not found." });
     }
 
+    await traceAction(req, `Deleted Branch schema entry: ${deletedBranch.name}`);
     res.status(200).json({ success: true, message: "Branch deleted successfully." });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -175,6 +180,7 @@ exports.updateHostelSettings = async (req, res) => {
       return res.status(404).json({ message: 'Hostel not found' });
     }
 
+    await traceAction(req, `Modified Hostel Settings (Time/Geofence) for: ${hostelCode}`);
     res.status(200).json({
       message: 'Hostel settings updated successfully',
       hostel: updatedHostel
@@ -230,6 +236,7 @@ exports.updateHostelById = async (req, res) => {
       return res.status(200).json({ success: false, message: "Hostel not found." });
     }
 
+    await traceAction(req, `Updated Hostel schema entry: ${updatedHostel.name} (${updatedHostel.code})`);
     res.status(200).json({ success: true, message: "Hostel updated successfully.", hostel: updatedHostel });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -247,6 +254,7 @@ exports.deleteHostelById = async (req, res) => {
       return res.status(200).json({ success: false, message: "Hostel not found." });
     }
 
+    await traceAction(req, `Deleted Hostel schema entry: ${deletedHostel.name}`);
     res.status(200).json({ success: true, message: "Hostel deleted successfully." });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

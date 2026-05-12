@@ -6,6 +6,7 @@ const sendSMS = require("../utils/sendSMS");
 const formatDate = require("../utils/formatDate");
 const { ImageModel } = require("../models/ProfileImage");
 const { transliterateName } = require("../utils/transliterationUtils");
+const { traceAction } = require("../utils/logger");
 
 const OUTGOING_TEMPLATE_ID = process.env.OUTGOING_TEMPLATE_ID;
 const RETURN_TEMPLATE_ID = process.env.RETURN_TEMPLATE_ID;
@@ -145,6 +146,7 @@ exports.approveRequest = async (req, res) => {
           });
       }
 
+      await traceAction(req, `Approved outpass request (${request.type}) for: ${request.rollNo}`);
       return res.status(200).json({ updated: true, message: "Request approved. Parent notification queued." });
     }
 
@@ -154,6 +156,7 @@ exports.approveRequest = async (req, res) => {
         Request.findByIdAndUpdate(request._id, { $set: request }),
       ]);
       emitRequestUpdate(req, request.hostelId);
+      await traceAction(req, `Rejected outpass request (${request.type}) for: ${request.rollNo}`);
       return res.status(200).json({ updated: true, message: "Request rejected." });
     }
 
@@ -206,6 +209,7 @@ exports.arriveRequest = async (req, res) => {
           });
       }
 
+      await traceAction(req, `Confirmed arrival for student: ${request.rollNo}`);
       return res.status(200).json({ updated: true, message: "Arrival confirmed. Parent notification queued." });
     }
 
@@ -260,6 +264,7 @@ exports.CancelRequestById = async (req, res) => {
         }
       }
 
+      await traceAction(req, `Cancelled outpass request for: ${request.rollNo} (Status: ${request.status})`);
       const msg = request.status === "CANCELLED02" ? "Request cancelled. Parent notification queued." : "Request cancelled. You can apply again.";
       return res.status(200).json({ updated: true, message: msg });
     }

@@ -148,7 +148,7 @@ exports.markAttendance = async (req, res) => {
         }
 
         if (!matchResult.isMatch) {
-            return res.status(403).json({ message: `Face verification failed. Confidence: ${(matchResult.distance * 100).toFixed(1)}%` });
+            return res.status(403).json({ message: "Face not match. Please verify your identity." });
         }
 
         // 4. Save Attendance

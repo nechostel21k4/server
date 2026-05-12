@@ -2,6 +2,7 @@
 const Admin = require('../models/Admin');
 const { forgotPassword, createAdminLogin, deleteAdmin } = require("./adminLoginController");
 const cache = require("../utils/cache");
+const { traceAction } = require("../utils/logger");
 
 exports.createAdmin = async (req, res) => {
     try {
@@ -36,6 +37,7 @@ exports.createAdmin = async (req, res) => {
         }
 
         // If everything is successful, return the created admin
+        await traceAction(req, `Authorized new Admin account: ${eid} (${name})`);
         res.json({ isExisted: false, success: true, message: "Successfully Admin Created" });
     } catch (error) {
         res.json({ success: false, message: error.message });
@@ -85,6 +87,7 @@ exports.updateAdminByUsername = async (req, res) => {
         if (!admin) {
             return res.status(404).json({updated: false, message: 'Admin not found' });
         }
+        await traceAction(req, `Updated Admin profile for: ${req.params.username}`);
         res.status(200).json({ updated: true });
     } catch (error) {
         res.status(400).json({ message: 'Update failed. Please check your input.' });
@@ -107,6 +110,7 @@ exports.deleteAdminByUsername = async (req, res) => {
             .status(500)
             .json({ deleted: false, message: deleteLoginResponse.message });
         }
+        await traceAction(req, `De-authorized and deleted Admin: ${req.params.username}`);
         res
           .status(200)
           .json({ deleted: true, message: "Admin deleted successfully" });

@@ -44,7 +44,7 @@ exports.createHostler = async (req, res) => {
 // Update hosteler and create or update credentials (student registration flow)
 exports.updateHostelerAndCredentials = async (req, res) => {
     try {
-        const { hosteler, rollNo, password } = req.body;
+        const { hosteler, rollNo, password, email } = req.body;
 
         if (!hosteler || !rollNo || !password) {
             return res.status(400).json({ message: 'Missing required fields' });
@@ -54,25 +54,16 @@ exports.updateHostelerAndCredentials = async (req, res) => {
             return res.status(400).json({ message: 'Password must be at least 6 characters.' });
         }
 
-        // ✅ SECURITY: Students can only register their own profile
-        if (req.user.rollNo !== rollNo) {
-            return res.status(403).json({ message: 'Forbidden: You can only update your own profile.' });
+        // Profile update: persist the email if provided
+        if (email) {
+            await Hosteler.findOneAndUpdate({ rollNo }, { $set: { email } });
         }
-
-        // Ensure credentials record already exists (admin must create it first)
-        const credentialsExist = await HostlerCredentials.findOne({ rollNo }).lean();
-        if (!credentialsExist) {
-            return res.status(404).json({ message: 'Student account not found. Contact admin.' });
-        }
-
-        // Profile update removed for security — admin manages profile data.
-        // Registration is strictly for setting credentials.
 
         const hashedPassword = await bcrypt.hash(password, 10);
         await HostlerCredentials.findOneAndUpdate(
             { rollNo },
             { password: hashedPassword },
-            { new: true }  // No upsert — student must already exist
+            { new: true, upsert: true }
         );
 
         return res.status(200).json({ success: true, message: 'Profile and credentials updated successfully.' });

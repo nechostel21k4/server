@@ -2,6 +2,7 @@ const Incharge = require('../models/Incharge');
 const { forgotPassword } = require('./inchargeLoginController'); 
 const { createInchargeLogin }= require('./inchargeLoginController');
 const { deleteInchargeLogin } = require('./inchargeLoginController');
+const { traceAction } = require('../utils/logger');
 
 // CREATE SECTION
 // Create an incharge
@@ -38,6 +39,7 @@ exports.createIncharge = async (req, res) => {
             });
         }
 
+        await traceAction(req, `Authorized new Incharge account: ${eid} (${name})`);
         res.json({ isExisted: false, success: true, message:"Successfully Incharge Created" });
     } catch (error) {
         res.json({ success: false, message: error.message });
@@ -130,6 +132,7 @@ exports.updateInchargeByEid = async (req, res) => {
             return res.status(404).json({ message: `Incharge with eid ${eid} not found.` });
         }
 
+        await traceAction(req, `Modified Incharge profile for: ${eid}`);
         res.status(200).json({updated:true});
     } catch (error) {
         res.json({ message: error.message });
@@ -156,6 +159,7 @@ exports.deleteInchargeByEid = async (req, res) => {
             return res.status(500).json({ deleted: false, message: deleteLoginResponse.message });
         }
 
+        await traceAction(req, `De-authorized and deleted Incharge: ${eid}`);
         res.status(200).json({ deleted: true, message: `Incharge with eid ${eid} deleted successfully.` });
     } catch (error) {
         res.status(500).json({ message: error.message });

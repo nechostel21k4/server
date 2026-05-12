@@ -1,5 +1,6 @@
 const Faculty = require("../models/Faculty");
 const bcrypt = require("bcrypt");
+const { traceAction } = require("../utils/logger");
 
 // Create a new faculty member (allows multiple records now)
 exports.createFaculty = async (req, res) => {
@@ -13,6 +14,7 @@ exports.createFaculty = async (req, res) => {
     });
 
     await faculty.save();
+    await traceAction(req, `Registered new Faculty member: ${username}`);
     res
       .status(201)
       .json({ success: true, message: "Faculty record created successfully." });
@@ -54,6 +56,7 @@ exports.updateFaculty = async (req, res) => {
         .json({ success: false, message: "Faculty record not found." });
     }
 
+    await traceAction(req, `Updated Faculty profile for: ${updatedFaculty.username}`);
     res.status(200).json({
       success: true,
       message: "Faculty record updated successfully.",
@@ -73,6 +76,7 @@ exports.deleteFaculty = async (req, res) => {
       return res.status(404).json({ success: false, message: "Faculty not found." });
     }
 
+    await traceAction(req, `Revoked access and deleted Faculty: ${deletedFaculty.username}`);
     res.status(200).json({ success: true, message: "Faculty access revoked." });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

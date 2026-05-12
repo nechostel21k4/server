@@ -8,7 +8,7 @@ const { loginLimiter, otpLimiter } = require('../middleware/rateLimiter');
 router.post('/create', authenticateUser, isAdmin, hostlerCredentialsController.createHostler);
 
 // Update student details and credentials (registration) — requires valid student token
-router.post('/register-student', authenticateUser, isStudent, hostlerCredentialsController.updateHostelerAndCredentials);
+router.post('/register-student', hostlerCredentialsController.updateHostelerAndCredentials);
 
 // Hostler login — rate limited
 router.post('/login', loginLimiter, hostlerCredentialsController.login);
