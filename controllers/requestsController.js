@@ -589,16 +589,14 @@ exports.getTodayArrivedByHostelId = async (req, res) => {
 exports.verifyRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const [request, image] = await Promise.all([
-      Request.findById(id).lean(),
-      ImageModel.findOne({ username: req.query.rollNo }).select("filename path").lean(),
-    ]);
+    const request = await Request.findById(id).lean();
 
     if (!request) return res.status(404).json({ success: false, message: "Request not found." });
 
-    const hosteler = await Hosteler.findOne({ rollNo: request.rollNo })
-      .select("name rollNo branch year")
-      .lean();
+    const [hosteler, image] = await Promise.all([
+      Hosteler.findOne({ rollNo: request.rollNo }).select("name rollNo branch year").lean(),
+      ImageModel.findOne({ username: request.rollNo }).select("filename path").lean(),
+    ]);
 
     if (!hosteler) return res.status(404).json({ success: false, message: "Student not found." });
 

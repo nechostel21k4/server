@@ -8,7 +8,7 @@ exports.createAdmin = async (req, res) => {
     try {
         const { name, eid, phoneNo, designation, password } = req.body;
         // Check if the admin already exists by eid
-        const existingAdmin = await Admin.findOne({ eid });
+        const existingAdmin = await Admin.findOne({ eid: String(eid) });
         if (existingAdmin) {
             return res.json({ isExisted: true, success: false, message: `Admin with eid ${eid} already exists.` });
         }
@@ -28,7 +28,7 @@ exports.createAdmin = async (req, res) => {
 
         if (!loginResponse.success) {
             // Rollback: Delete the admin if creating the login failed
-            await Admin.findOneAndDelete({ eid });
+            await Admin.findOneAndDelete({ eid: String(eid) });
             return res.json({
                 success: false,
                 message: 'Failed to create admin login. Admin creation rolled back.',

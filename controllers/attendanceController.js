@@ -84,10 +84,9 @@ exports.markAttendance = async (req, res) => {
             }
         }
 
-        // 3. Geofence Check (Non-blocking: Marks as Absent if outside)
-        let isWithinGeofence = false;
+        // 3. Geofence Check (STRICT ENFORCEMENT)
         let distance = 0;
-        let attendanceStatus = 'Present'; // Default
+        let attendanceStatus = 'Present'; 
         let attendanceRemarks = "Within geofence";
 
         if (targetHostel.geoCoordinates && targetHostel.geoCoordinates.latitude) {
@@ -100,59 +99,41 @@ exports.markAttendance = async (req, res) => {
             distance = Math.round(distance * 100) / 100;
             const maxRadius = targetHostel.geoCoordinates.radius || 200;
 
-
-
-            if (distance <= maxRadius) {
-                isWithinGeofence = true;
-                attendanceStatus = 'Present';
-                attendanceRemarks = "Within geofence";
-            } else {
-                isWithinGeofence = false;
-                attendanceStatus = 'Absent';
-                attendanceRemarks = `Outside geofence (${distance}m > ${maxRadius}m)`;
+            if (distance > maxRadius) {
+                return res.status(403).json({ 
+                    success: false,
+                    message: `Attendance Rejected: You are outside the allowed radius (${distance}m > ${maxRadius}m). Please mark attendance from within the hostel premises.` 
+                });
             }
         } else {
-            // Fallback if no geofence set
-            isWithinGeofence = true;
             attendanceRemarks = "No geofence configured";
         }
 
-        // 3. Verify Face
+        // 4. Verify Face (STRICT SERVER-SIDE COMPUTATION)
         const studentCreds = await HostlerCredentials.findOne({ rollNo: studentId });
 
         if (!studentCreds || !studentCreds.faceDescriptor || studentCreds.faceDescriptor.length < 100) {
             return res.status(400).json({ message: "Face not registered. Please register your face first." });
         }
 
-        let matchResult;
-
-        // OPTIMIZATION: Check if client sent the descriptor directly
-        if (req.body.faceDescriptor) {
-            try {
-                const clientDescriptor = JSON.parse(req.body.faceDescriptor);
-                // Convert to Float32Array or array depending on what FaceService expects (isFaceMatch handles both usually, but let's be safe)
-                // FaceAPI descriptors are Float32Array. 
-                // clientDescriptor from JSON will be a regular array. FaceService.isFaceMatch uses faceapi.euclideanDistance which works with arrays.
-
-                matchResult = FaceService.isFaceMatch(studentCreds.faceDescriptor, clientDescriptor);
-            } catch (e) {
-                return res.status(400).json({ message: "Invalid face descriptor format." });
-            }
-        } else {
-            // Fallback: Compute on server (Slow)
-            const uploadedDescriptor = await FaceService.getFaceDescriptor(file.buffer);
-            if (!uploadedDescriptor) {
-                return res.status(400).json({ message: "No face detected in the image." });
-            }
-            matchResult = FaceService.isFaceMatch(studentCreds.faceDescriptor, uploadedDescriptor);
+        // SECURITY: Never trust a descriptor sent from the client.
+        // An attacker could "replay" a known-good descriptor string.
+        // We always re-compute it from the uploaded image buffer.
+        const uploadedDescriptor = await FaceService.getFaceDescriptor(file.buffer);
+        if (!uploadedDescriptor) {
+            return res.status(400).json({ message: "No face detected in the image. Please take a clear photo." });
         }
 
+        const matchResult = FaceService.isFaceMatch(studentCreds.faceDescriptor, uploadedDescriptor);
+
         if (!matchResult.isMatch) {
-            return res.status(403).json({ message: "Face not match. Please verify your identity." });
+            return res.status(403).json({ message: "Face verification failed. Please try again with a clear photo." });
         }
 
         // 4. Save Attendance
 
+
+        const isWithinGeofence = true;
 
         const newAttendance = new Attendance({
             studentId,
@@ -207,45 +188,21 @@ exports.registerFace = async (req, res) => {
             return res.status(404).json({ message: "Student account not found. Contact admin." });
         }
 
-        let descriptor;
-
-        // OPTIMIZATION: Check if client sent the descriptor
-        if (req.body.faceDescriptor) {
-            try {
-                // Parse if stringified
-                const parsed = typeof req.body.faceDescriptor === 'string'
-                    ? JSON.parse(req.body.faceDescriptor)
-                    : req.body.faceDescriptor;
-
-                descriptor = new Float32Array(parsed); // Ensure Float32Array
-            } catch (e) {
-                return res.status(400).json({ message: "Invalid face descriptor format." });
-            }
-        } else {
-            // Fallback: Compute on server (Slow)
-            descriptor = await FaceService.getFaceDescriptor(file.buffer);
-            if (!descriptor) {
-                return res.status(400).json({ message: "No face detected. Try again." });
-            }
+        // ✅ SECURITY: Always compute descriptor on server to prevent descriptor-injection attacks
+        const descriptor = await FaceService.getFaceDescriptor(file.buffer);
+        if (!descriptor) {
+            return res.status(400).json({ message: "No face detected. Please provide a clear facial photo." });
         }
 
         // Convert Float32Array to regular array for Mongo
         const descriptorArray = Array.from(descriptor);
-
-        // Update Credentials
-        // Note: For 10 images, the frontend should probably send them one by one or as a batch.
-        // Here we handle single upload. If batch is needed, we'd accept `req.files`.
-        // Let's assume we update with the BEST single image for now to keep it simple, 
-        // OR the user calls this API multiple times?
-        // Better: frontend selects best image or sends one verified image. 
-        // We will store this one.
 
         await HostlerCredentials.findOneAndUpdate(
             { rollNo },
             {
                 $set: { faceDescriptor: descriptorArray }
             },
-            { upsert: true } // Create if not exists? No, student must be in DB.
+            { upsert: true }
         );
 
         res.status(200).json({ message: "Face registered successfully." });

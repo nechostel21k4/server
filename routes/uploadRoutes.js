@@ -18,6 +18,6 @@ router.post('/addStudents', authenticateUser, isAdmin, addHostelers);
 // Route to image upload
 router.post("/uploadimage/:username", authenticateUser, upload.single('image'), uploadImage);
 
-router.get("/getImage/:username", getImageByUsername);
+router.get("/getImage/:username", authenticateUser, getImageByUsername);
 
 module.exports = router;

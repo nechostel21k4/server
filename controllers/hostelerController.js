@@ -94,7 +94,7 @@ exports.createHosteler = async (req, res) => {
   try {
     const { rollNo } = req.body;
 
-    const exists = await Hosteler.findOne({ rollNo }).lean();
+    const exists = await Hosteler.findOne({ rollNo: String(rollNo) }).lean();
     if (exists) {
       return res.status(409).json({ success: false, isExisted: true, message: `Student ${rollNo} already exists.` });
     }
@@ -325,7 +325,7 @@ exports.getFilteredHostlers = async (req, res) => {
     const { page = 1, limit = 20, ...filterInputs } = req.body;
 
     const pageNum = Math.max(1, parseInt(page, 10));
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+    const limitNum = Math.max(1, parseInt(limit, 10) || 20);
     const skip = (pageNum - 1) * limitNum;
 
     const filter = buildFilter(filterInputs);
@@ -468,7 +468,7 @@ exports.getHostelersByRoomNo = async (req, res) => {
       return res.status(400).json({ message: "hostelId and roomNo are required." });
     }
 
-    const hostlers = await Hosteler.find({ roomNo, hostelId }).lean();
+    const hostlers = await Hosteler.find({ roomNo: String(roomNo), hostelId: String(hostelId) }).lean();
     if (hostlers.length === 0) {
       return res.status(200).json({ hostlers: [], images: [] });
     }
@@ -501,7 +501,7 @@ exports.getMyRoomies = async (req, res) => {
     }
 
     const hostlers = await Hosteler.find(
-      { roomNo, hostelId },
+      { roomNo: String(roomNo), hostelId: String(hostelId) },
       { rollNo: 1, name: 1, college: 1, year: 1, branch: 1, currentStatus: 1, lastRequest: 1 }
     ).lean();
 
@@ -591,7 +591,7 @@ exports.updateFilteredHostlers = async (req, res) => {
 
 exports.createRequestAndUpdateStudent = async (req, res) => {
   try {
-    const { student, lastRequest } = req.body;
+    const { lastRequest } = req.body; // Ignore 'student' object from client
     const { RollNo } = req.params;
 
     // ✅ SECURITY: Students can only create requests for themselves (IDOR prevention)
@@ -599,9 +599,12 @@ exports.createRequestAndUpdateStudent = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Forbidden: You can only submit requests for your own profile.' });
     }
 
-    const existing = await Hosteler.findOne({ rollNo: RollNo }).lean();
+    const existing = await Hosteler.findOne({ rollNo: RollNo });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: "Student not found." });
+    }
 
-    if (existing?.lastRequest) {
+    if (existing.lastRequest) {
       const prev = existing.lastRequest;
       const now = new Date();
 
@@ -617,10 +620,30 @@ exports.createRequestAndUpdateStudent = async (req, res) => {
       }
     }
 
-    const newRequest = await Request.create(lastRequest);
+    // ✅ SECURITY: Construct the request object SERVER-SIDE to prevent status spoofing
+    const serverSideRequest = {
+      ...lastRequest,
+      id: `REQ${Date.now()}${Math.floor(Math.random() * 1000)}`, // Server-generated ID
+      name: existing.name,
+      rollNo: existing.rollNo,
+      hostelId: existing.hostelId,
+      phoneNo: existing.phoneNo,
+      parentPhoneNo: existing.parentPhoneNo,
+      status: 'SUBMITTED', // FORCE SUBMITTED
+      isActive: true,      // FORCE ACTIVE
+      submitted: {
+        time: new Date(),
+        name: existing.name,
+        rollNo: existing.rollNo
+      }
+    };
+
+    const newRequest = await Request.create(serverSideRequest);
+    
+    // Update only the lastRequest field, do NOT allow student info updates through this endpoint
     const updated = await Hosteler.findOneAndUpdate(
       { rollNo: RollNo },
-      { ...student, lastRequest: newRequest },
+      { $set: { lastRequest: newRequest } },
       { new: true }
     ).lean();
 

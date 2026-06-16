@@ -42,6 +42,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
 
 const corsOptions = {
   origin: function (origin, callback) {
+    if (process.env.NODE_ENV !== "production") return callback(null, true);
     if (!origin) return callback(null, true);
     
     const normalizedOrigin = origin.replace(/\/$/, "");
@@ -50,7 +51,7 @@ const corsOptions = {
       return normalizedAllowed === normalizedOrigin;
     });
 
-    if (isAllowed || !origin) {
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.warn(`Origin ${origin} not allowed by CORS`);
@@ -91,6 +92,8 @@ app.use(helmet({
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: false, limit: '5mb' }));
+const mongoSanitize = require('express-mongo-sanitize');
+app.use(mongoSanitize());
 app.use("/uploads", express.static("uploads"));
 
 // Routes
@@ -149,8 +152,8 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 if (process.env.NODE_ENV !== "production") {
-  server.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT} and accessible on network`);
   });
 }
 
