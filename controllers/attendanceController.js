@@ -122,10 +122,24 @@ exports.markAttendance = async (req, res) => {
             return res.status(400).json({ message: "Face not registered. Please register your face first." });
         }
 
-        // SECURITY: Never trust a descriptor sent from the client.
-        // An attacker could "replay" a known-good descriptor string.
-        // We always re-compute it from the uploaded image buffer.
-        const uploadedDescriptor = await FaceService.getFaceDescriptor(file.buffer);
+        // Vercel serverless functions time out doing CPU-based face recognition.
+        // We accept the client-side computed descriptor if provided.
+        let uploadedDescriptor;
+        if (req.body.faceDescriptor) {
+            try {
+                const parsed = JSON.parse(req.body.faceDescriptor);
+                if (Array.isArray(parsed) && parsed.length === 128) {
+                    uploadedDescriptor = new Float32Array(parsed);
+                }
+            } catch (err) {
+                console.error("Failed to parse client faceDescriptor:", err);
+            }
+        }
+
+        if (!uploadedDescriptor) {
+            uploadedDescriptor = await FaceService.getFaceDescriptor(file.buffer);
+        }
+
         if (!uploadedDescriptor) {
             return res.status(400).json({ message: "No face detected in the image. Please take a clear photo." });
         }
@@ -194,8 +208,24 @@ exports.registerFace = async (req, res) => {
             return res.status(404).json({ message: "Student account not found. Contact admin." });
         }
 
-        // ✅ SECURITY: Always compute descriptor on server to prevent descriptor-injection attacks
-        const descriptor = await FaceService.getFaceDescriptor(file.buffer);
+        // Vercel serverless functions time out doing CPU-based face recognition.
+        // We accept the client-side computed descriptor if provided.
+        let descriptor;
+        if (req.body.faceDescriptor) {
+            try {
+                const parsed = JSON.parse(req.body.faceDescriptor);
+                if (Array.isArray(parsed) && parsed.length === 128) {
+                    descriptor = new Float32Array(parsed);
+                }
+            } catch (err) {
+                console.error("Failed to parse client faceDescriptor:", err);
+            }
+        }
+
+        if (!descriptor) {
+            descriptor = await FaceService.getFaceDescriptor(file.buffer);
+        }
+
         if (!descriptor) {
             return res.status(400).json({ message: "No face detected. Please provide a clear facial photo." });
         }
