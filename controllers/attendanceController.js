@@ -47,7 +47,13 @@ exports.markAttendance = async (req, res) => {
         // 1. Check Previous Attendance Today
         // 1. Check Previous Attendance Today
         // Ensure we check based on Indian Standard Time (IST) if deployment is cloud/UTC
-        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // Format: YYYY-MM-DD
+        const getISTDateStr = () => {
+            const now = new Date();
+            const istOffset = 5.5 * 60 * 60 * 1000;
+            const istDate = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + istOffset);
+            return istDate.toISOString().split('T')[0];
+        };
+        const today = getISTDateStr(); // Format: YYYY-MM-DD
 
         const existing = await Attendance.findOne({ studentId, date: today });
         if (existing) {
@@ -139,7 +145,7 @@ exports.markAttendance = async (req, res) => {
             studentId,
             hostelId,
             date: today,
-            time: new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false }),
+            time: new Date(new Date().getTime() + (new Date().getTimezoneOffset() * 60000) + (5.5 * 60 * 60 * 1000)).toTimeString().split(' ')[0],
             location: { latitude, longitude },
 
 
