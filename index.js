@@ -30,6 +30,10 @@ const attendanceRoutes = require("./routes/attendance");
 const { default: mongoose } = require("mongoose");
 
 const app = express();
+
+// Trust first proxy (required for Vercel deployment and express-rate-limit to work correctly)
+app.set("trust proxy", 1);
+
 const http = require("http");
 const server = http.createServer(app);
 const { Server } = require("socket.io");

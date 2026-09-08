@@ -24,7 +24,6 @@ const hostelersSchema = new mongoose.Schema({
 
 // Performance Optimization: Indexes for frequently filtered fields
 hostelersSchema.index({ hostelId: 1, college: 1, year: 1, branch: 1 });
-hostelersSchema.index({ rollNo: 1 }, { unique: true });
 hostelersSchema.index({ name: 'text' }); // Text index for better search
 hostelersSchema.index({ currentStatus: 1 });
 
