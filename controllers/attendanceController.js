@@ -29,8 +29,8 @@ exports.markAttendance = async (req, res) => {
         const { studentId, latitude, longitude } = req.body;
         const file = req.file;
 
-        if (!studentId || !latitude || !longitude || !file) {
-            return res.status(400).json({ message: "Missing fields (studentId, lat, lng, image)" });
+        if (!studentId || !latitude || latitude === 'undefined' || !longitude || longitude === 'undefined' || !file) {
+            return res.status(400).json({ message: "Missing fields or location not available (studentId, lat, lng, image). Please ensure GPS is enabled." });
         }
 
         // ✅ SECURITY: Cross-validate studentId against JWT — prevent marking attendance for others
